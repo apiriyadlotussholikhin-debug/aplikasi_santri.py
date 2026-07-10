@@ -19,8 +19,8 @@ import io  # Ditambahkan untuk handle eksport ke Excel asli
 # 🔐 KODE BARU 1: SISTEM KEAMANAN 3 AKUN UTAMA
 # =========================================================
 AKUN_DATABASE = {
-    "PONTRA": {"password": "PONTRA.1", "akses": "Putra"},
-    "PONTRI": {"password": "PONTRI.1", "akses": "Putri"},
+    "ADMIN PONTRA": {"password": "PONTRA.1", "akses": "Putra dan Ustadz"},
+    "ADMIN PONTRI": {"password": "PONTRI.1", "akses": "Putri dan Ustadzah"},
     "ADMIN PUSAT": {"password": "PUSAT.1", "akses": "Semua"}
 }
 
@@ -80,7 +80,7 @@ FILE_PENGURUS_KAMAR = "data_pengurus_kamar.csv"
 FOLDER_BACKUP = "backup_data_santri"
 
 NAMA_PONPES = "API RIYADLOTUSSHOLIKHIN WASSHOLIKHAT"
-DAFTAR_KAMAR = ["Kamar A1", "Kamar A2", "Kamar B1", "Kamar B2", "Kamar C2"]
+DAFTAR_KAMAR = ["Kamar A1", "Kamar A2", "Kamar B1", "Kamar B2", "Kamar C2","Kamar Putri"]
 
 KOLOM_SANTRI = [
     "NO INDUK", "NAMA SANTRI", "JENIS KELAMIN", "AYAH", "IBU", "WALI", 
@@ -195,11 +195,11 @@ def load_data_santri():
 
                 # Jika akun yang login adalah Admin Putra
                 if st.session_state.get("hak_akses") == "Putra":
-                    df = df[df["JENIS KELAMIN"].isin(["PUTRA", "LAKI-LAKI", "L"])]
+                    df = df[df["JENIS KELAMIN"].isin(["PUTRA", "LAKI-LAKI", "L", "USTADZ"])]
                 
                 # Jika akun yang login adalah Admin Putri
                 elif st.session_state.get("hak_akses") == "Putri":
-                    df = df[df["JENIS KELAMIN"].isin(["PUTRI", "PEREMPUAN", "P"])]
+                    df = df[df["JENIS KELAMIN"].isin(["PUTRI", "PEREMPUAN", "P", "USTADZAH"])]
             # =====================================================================
 
             return df # Pastikan baris ini sejajar/lurus dengan kode saringan di atas
@@ -274,10 +274,28 @@ def konversi_ke_excel_asli(df_input):
         df_input.to_excel(writer, index=False, sheet_name='Data_Pesantren')
     return output.getvalue()
 
-# Ambil Memori Data Aktif
+# ==========================================
+# 📋 AMBIL MEMORI DATA AKTIF & FILTER AKSES
+# ==========================================
 df_santri = load_data_santri()
 df_asatidz = load_data_asatidz()
 df_pengurus_kamar = load_pengurus_kamar()
+
+# 1. DETEKSI STATUS AKSES GLOBAL (MEMBONGKAR MEMORI LOGIN APLIKASI)
+status_login_global = str(st.session_state.items()).upper()
+
+# 2. PROSES FILTER AMAN (TERMASUK UNTUK ADMIN PUSAT)
+if "PUSAT" in status_login_global or "SUPER" in status_login_global:
+    # JIKA ADMIN PUSAT/SUPERADMIN: JANGAN DI-FILTER, BIARKAN SEMUA DATA MUNCUL
+    pass
+elif "PUTRA" in status_login_global:
+    # JIKA ADMIN PUTRA: HANYA TAMPILKAN USTADZ
+    if not df_asatidz.empty and "JENIS KELAMIN" in df_asatidz.columns:
+        df_asatidz = df_asatidz[df_asatidz["JENIS KELAMIN"] == "Ustadz"]
+elif "PUTRI" in status_login_global:
+    # JIKA ADMIN PUTRI: HANYA TAMPILKAN USTADZAH
+    if not df_asatidz.empty and "JENIS KELAMIN" in df_asatidz.columns:
+        df_asatidz = df_asatidz[df_asatidz["JENIS KELAMIN"] == "Ustadzah"]
 
 if not df_santri.empty:
     list_kelas_terdeteksi = sorted([x for x in df_santri["KELAS"].unique() if x and x not in ["nan", "🔴 BELUM LENGKAP", "[Belum Lengkap]"]])

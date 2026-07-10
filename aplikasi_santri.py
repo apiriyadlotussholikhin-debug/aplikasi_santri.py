@@ -592,15 +592,28 @@ with tab_kelola:
                 edesa = st.text_input("Ubah DESA", value=g_k(dl["DESA"]))
                 ekec = st.text_input("Ubah KECAMATAN", value=g_k(dl["KECAMATAN"]))
                 ekab = st.text_input("Ubah KABUPATEN", value=g_k(dl["KABUPATEN"]))
-                
-            b1, b2 = st.columns([2, 4])
+                b1, b2 = st.columns([2, 4])
             with b1:
                 if st.button("💾 Simpan Perubahan Santri", type="primary"):
-                    df_santri.iloc[idx] = [
-                        einduk or "🔴 BELUM LENGKAP", enama or "🔴 BELUM LENGKAP", ejk, eayah or "🔴 BELUM LENGKAP", eibu or "🔴 BELUM LENGKAP", ewali or "🔴 BELUM LENGKAP",
-                        edukuh or "🔴 BELUM LENGKAP", edesa or "🔴 BELUM LENGKAP", ekec or "🔴 BELUM LENGKAP", ekab or "🔴 BELUM LENGKAP",
-                        estatus, enik or "🔴 BELUM LENGKAP", ekk or "🔴 BELUM LENGKAP", etmp or "🔴 BELUM LENGKAP", etgl.strftime("%Y-%m-%d"), ekelas, ekamar
-                    ]
+                    df_santri.at[idx, "NISN"] = locals().get('e_nisn', locals().get('edit_nisn', '')) or "🔴 BELUM LENGKAP"
+                    df_santri.at[idx, "NAMA"] = locals().get('e_nama', locals().get('edit_nama', '')) or "🔴 BELUM LENGKAP"
+                    df_santri.at[idx, "JENIS KELAMIN"] = locals().get('e_jk', locals().get('edit_jk', 'Laki-laki'))
+                    df_santri.at[idx, "STATUS"] = locals().get('e_status', locals().get('edit_status', 'Aktif'))
+                    df_santri.at[idx, "DUKUH"] = locals().get('e_dukuh', locals().get('edit_dukuh', '')) or "🔴 BELUM LENGKAP"
+                    df_santri.at[idx, "DESA"] = locals().get('e_desa', locals().get('edit_desa', '')) or "🔴 BELUM LENGKAP"
+                    df_santri.at[idx, "KECAMATAN"] = locals().get('e_kec', locals().get('edit_kec', '')) or "🔴 BELUM LENGKAP"
+                    df_santri.at[idx, "KABUPATEN"] = locals().get('e_kab', locals().get('edit_kab', '')) or "🔴 BELUM LENGKAP"
+                    df_santri.at[idx, "NIK"] = locals().get('e_nik', locals().get('edit_nik', '')) or "🔴 BELUM LENGKAP"
+                    df_santri.at[idx, "KK"] = locals().get('e_kk', locals().get('edit_kk', '')) or "🔴 BELUM LENGKAP"
+                    df_santri.at[idx, "TEMPAT LAHIR"] = locals().get('e_tmp', locals().get('edit_tmp', '')) or "🔴 BELUM LENGKAP"
+                
+                    # Pengaman untuk tanggal lahir
+                    tgl_input = locals().get('e_tgl', locals().get('edit_tgl', None))
+                    df_santri.at[idx, "TGL LAHIR"] = tgl_input.strftime("%Y-%m-%d") if hasattr(tgl_input, "strftime") else str(tgl_input or "")
+                
+                    df_santri.at[idx, "NO HP WA ORTU"] = locals().get('e_hp', locals().get('edit_hp', '')) or "🔴 BELUM LENGKAP"
+                
+                    # Proses simpan file
                     save_all(df_santri[KOLOM_SANTRI], FILE_SANTRI)
                     tampilkan_notifikasi_sukses()
                     st.rerun()
@@ -611,7 +624,6 @@ with tab_kelola:
                     df_santri.to_csv(FILE_SANTRI, index=False, sep=',', encoding='utf-8-sig')
                     tampilkan_notifikasi_sukses()
                     st.rerun()
-
 # ------------------------------------------
 # TAB 4: PEMETAAN DAERAH & KELAS (REVISI PRINT KE EXCEL MS ASLI)
 # ------------------------------------------

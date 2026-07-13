@@ -187,22 +187,17 @@ def load_data_santri():
                     df[col] = df[col].fillna("🔴 BELUM LENGKAP").astype(str).str.strip()
 
             # =====================================================================
-            # 🗂️ KODE SARINGAN SAKTI BARU LANGSUNG DI DALAM FUNGSI (PASTE DI SINI)
+            # 🗂️ KODE SARINGAN DATA SANTRI (FIX LOGIN SAKTI)
             # =====================================================================
             if not df.empty and "JENIS KELAMIN" in df.columns:
-                # Bersihkan kolom Jenis Kelamin ke huruf besar
-                df["JENIS KELAMIN"] = df["JENIS KELAMIN"].astype(str).str.upper().str.strip()
+                akses_login = str(st.session_state.get("hak_akses", ""))
+                # Pakai "in" karena statusnya mengandung kata "Putra dan Ustadz"
+                if "Putra" in akses_login:
+                    df = df[df["JENIS KELAMIN"].astype(str).str.upper().isin(["PUTRA", "LAKI-LAKI", "L"])]
+                elif "Putri" in akses_login:
+                    df = df[df["JENIS KELAMIN"].astype(str).str.upper().isin(["PUTRI", "PEREMPUAN", "P"])]
 
-                # Jika akun yang login adalah Admin Putra
-                if st.session_state.get("hak_akses") == "Putra":
-                    df = df[df["JENIS KELAMIN"].isin(["PUTRA", "LAKI-LAKI", "L", "USTADZ"])]
-                
-                # Jika akun yang login adalah Admin Putri
-                elif st.session_state.get("hak_akses") == "Putri":
-                    df = df[df["JENIS KELAMIN"].isin(["PUTRI", "PEREMPUAN", "P", "USTADZAH"])]
-            # =====================================================================
-
-            return df # Pastikan baris ini sejajar/lurus dengan kode saringan di atas
+            return df
             
         except Exception as e:
             st.error(f"Gagal membaca file santri: {e}")
@@ -246,8 +241,21 @@ def load_data_asatidz():
                 if c_num in df.columns:
                     df[c_num] = df[c_num].astype(str).str.replace(".0", "", regex=False).str.replace("nan", "🔴 BELUM LENGKAP", regex=False).str.strip()
                     df[c_num] = df[c_num].apply(lambda x: x.split('.')[0] if '.' in x and x.split('.')[1] == '0' else x)
+
+            # =====================================================================
+            # 🗂️ KODE SARINGAN DATA ASATIDZ (FIX LOGIN SAKTI)
+            # =====================================================================
+            if not df.empty and "JENIS KELAMIN" in df.columns:
+                akses_login = str(st.session_state.get("hak_akses", ""))
+                # Pakai "in" karena statusnya mengandung kata "Putra dan Ustadz"
+                if "Putra" in akses_login:
+                    df = df[df["JENIS KELAMIN"].isin(["Ustadz", "Putra"])]
+                elif "Putri" in akses_login:
+                    df = df[df["JENIS KELAMIN"].isin(["Ustadzah", "Putri"])]
+
             return df[KOLOM_ASATIDZ]
-        except: return df_kosong
+        except: 
+            return df_kosong
     return df_kosong
 
 def load_pengurus_kamar():
@@ -642,6 +650,16 @@ with tab_kelola:
                     df_santri.to_csv(FILE_SANTRI, index=False, sep=',', encoding='utf-8-sig')
                     tampilkan_notifikasi_sukses()
                     st.rerun()
+
+        st.write("---")
+        st.subheader("🚨 Fitur Bahaya (Reset Total Data Santri)")
+        if st.button("⚠️ HAPUS SEMUA DATA SANTRI PERMANEN"):
+            if os.path.exists(FILE_SANTRI):
+                jalankan_auto_backup(FILE_SANTRI, "sebelum")
+                os.remove(FILE_SANTRI)
+            tampilkan_notifikasi_sukses()
+            st.rerun()
+
 # ------------------------------------------
 # TAB 4: PEMETAAN DAERAH & KELAS (REVISI PRINT KE EXCEL MS ASLI)
 # ------------------------------------------

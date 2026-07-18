@@ -448,7 +448,7 @@ with tab_input:
             with c1:
                 no_induk = st.text_input("NO INDUK")
                 nama_santri = st.text_input("NAMA SANTRI*")
-                jk = st.selectbox("JENIS KELAMIN", ["Putra", "Putri"])
+                jk = st.selectbox("JENIS KELAMIN", ["PUTRA", "PUTRI"])
                 nik = st.text_input("NIK")
                 no_kk = st.text_input("KK")
             with c2:

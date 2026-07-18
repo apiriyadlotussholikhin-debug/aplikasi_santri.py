@@ -193,9 +193,9 @@ def load_data_santri():
                 akses_login = str(st.session_state.get("hak_akses", ""))
                 # Pakai "in" karena statusnya mengandung kata "Putra dan Ustadz"
                 if "Putra" in akses_login:
-                    df = df[df["JENIS KELAMIN"].astype(str).str.upper().isin(["PUTRA", "LAKI-LAKI", "L"])]
+                    df = df[df["JENIS KELAMIN"].astype(str).str.upper().isin(["PUTRA"])]
                 elif "Putri" in akses_login:
-                    df = df[df["JENIS KELAMIN"].astype(str).str.upper().isin(["PUTRI", "PEREMPUAN", "P"])]
+                    df = df[df["JENIS KELAMIN"].astype(str).str.upper().isin(["PUTRI"])]
 
             return df
             
@@ -396,8 +396,8 @@ with tab_dash:
     u_ustadz = len(df_real_as[(df_real_as["STATUS"].str.upper().str.strip() == "AKTIF") & (df_real_as["JENIS KELAMIN"] == "USTADZ")]) if not df_real_as.empty else 0
     u_ustadzah = len(df_real_as[(df_real_as["STATUS"].str.upper().str.strip() == "AKTIF") & (df_real_as["JENIS KELAMIN"] == "USTADZAH")]) if not df_real_as.empty else 0
         
-    col_p1.info(f"👦 **Santri Putra:** {s_putra} Orang")
-    col_p2.info(f"👧 **Santri Putri:** {s_putri} Orang")
+    col_p1.info(f"👦 **SANTRI PUTRA:** {s_putra} Orang")
+    col_p2.info(f"👧 **SANRTI PUTRI:** {s_putri} Orang")
     col_p3.success(f"👳 **Ustadz (Guru L):** {u_ustadz} Orang")
     col_p4.success(f"🧕 **Ustadzah (Guru P):** {u_ustadzah} Orang")
     

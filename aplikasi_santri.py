@@ -924,8 +924,9 @@ with tab_asatidz_panel:
                 st.rerun()
 
     # 2. Ini bagian pemicunya, pastikan tulisan 'if' ini sejajar dengan menu atasnya
-    if guru_terpilih != "-- Pilih Asatidz --":
-        proses_edit_asatidz(guru_terpilih, df_asatidz)
+    if 'guru_terpilih' in locals() or 'guru_terpilih' in globals():
+        if guru_terpilih != "-- Pilih Asatidz --":
+            proses_edit_asatidz(guru_terpilih, df_asatidz)
     else:
         st.info("Belum ada data asatidz/pengajar aktif yang tersimpan di database.")
 

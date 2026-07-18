@@ -600,7 +600,7 @@ with tab_kelola:
             with e1:
                 enama = st.text_input("Ubah NAMA", value=g_k(dl["NAMA SANTRI"]))
                 einduk = st.text_input("Ubah NO INDUK", value=g_k(dl["NO INDUK"]))
-                ejk = st.selectbox("Ubah JK", ["Putra", "Putri"], index=0 if dl["JENIS KELAMIN"] == "Putra" else 1)
+                ejk = st.selectbox("Ubah JK", ["PUTRA", "PUTRI"], index=0 if dl["JENIS KELAMIN"] == "Putra" else 1)
                 enik = st.text_input("Ubah NIK", value=g_k(dl["NIK"]))
                 ekk = st.text_input("Ubah KK", value=g_k(dl["KK"]))
             with e2:
@@ -623,7 +623,7 @@ with tab_kelola:
                 if st.button("💾 Simpan Perubahan Santri", type="primary"):
                     df_santri.at[idx, "NISN"] = locals().get('e_nisn', locals().get('edit_nisn', '')) or "🔴 BELUM LENGKAP"
                     df_santri.at[idx, "NAMA"] = locals().get('e_nama', locals().get('edit_nama', '')) or "🔴 BELUM LENGKAP"
-                    df_santri.at[idx, "JENIS KELAMIN"] = locals().get('e_jk', locals().get('edit_jk', 'Laki-laki'))
+                    df_santri.at[idx, "JENIS KELAMIN"] = locals().get('e_jk', locals().get('edit_jk', 'PUTRA'))
                     df_santri.at[idx, "STATUS"] = locals().get('e_status', locals().get('edit_status', 'Aktif'))
                     df_santri.at[idx, "DUKUH"] = locals().get('e_dukuh', locals().get('edit_dukuh', '')) or "🔴 BELUM LENGKAP"
                     df_santri.at[idx, "DESA"] = locals().get('e_desa', locals().get('edit_desa', '')) or "🔴 BELUM LENGKAP"

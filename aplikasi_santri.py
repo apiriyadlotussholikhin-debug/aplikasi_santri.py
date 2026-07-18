@@ -500,8 +500,8 @@ with tab_input:
                     for col in KOLOM_SANTRI:
                         if col not in df_upload.columns:
                             if col == "KAMAR": df_upload[col] = "Belum Diatur"
-                            elif col == "STATUS": df_upload[col] = "Aktif"
-                            elif col == "JENIS KELAMIN": df_upload[col] = "Putra"
+                            elif col == "STATUS": df_upload[col] = "AKTIF"
+                            elif col == "JENIS KELAMIN": df_upload[col] = "PUTRA"
                             else: df_upload[col] = "🔴 BELUM LENGKAP"
                         else:
                             df_upload[col] = df_upload[col].astype(str).str.replace("nan", "🔴 BELUM LENGKAP", regex=False).str.strip()
@@ -600,7 +600,7 @@ with tab_kelola:
             with e1:
                 enama = st.text_input("Ubah NAMA", value=g_k(dl["NAMA SANTRI"]))
                 einduk = st.text_input("Ubah NO INDUK", value=g_k(dl["NO INDUK"]))
-                ejk = st.selectbox("Ubah JK", ["PUTRA", "PUTRI"], index=0 if dl["JENIS KELAMIN"] == "Putra" else 1)
+                e_jk = st.selectbox("Ubah JK", ["PUTRA", "PUTRI"], index=0 if dl["JENIS KELAMIN"] == "PUTRA" else 1)
                 enik = st.text_input("Ubah NIK", value=g_k(dl["NIK"]))
                 ekk = st.text_input("Ubah KK", value=g_k(dl["KK"]))
             with e2:

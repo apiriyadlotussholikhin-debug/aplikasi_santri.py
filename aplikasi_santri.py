@@ -840,7 +840,7 @@ with tab_asatidz_panel:
                         df_upload_as.loc[~df_upload_as["STATUS"].isin(["Aktif", "Keluar", "Lulus"]), "STATUS"] = "Aktif"
                     
                     if "JENIS KELAMIN" in df_upload_as.columns:
-                        df_upload_as["JENIS KELAMIN"] = df_upload_as["JENIS KELAMIN"].str.strip().str.capitalize()
+                        df_upload_as["JENIS KELAMIN"] = df_upload_as["JENIS KELAMIN"].str.strip().str.upper()
                         df_upload_as.loc[df_upload_as["JENIS KELAMIN"].isin(["Putra", "Laki-laki", "Ustadz"]), "JENIS KELAMIN"] = "Ustadz"
                         df_upload_as.loc[df_upload_as["JENIS KELAMIN"].isin(["Putri", "Perempuan", "Ustadzah"]), "JENIS KELAMIN"] = "Ustadzah"
 

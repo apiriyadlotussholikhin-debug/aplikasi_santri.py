@@ -511,7 +511,7 @@ with tab_input:
                         df_upload.loc[~df_upload["STATUS"].isin(["Aktif", "Keluar", "Lulus"]), "STATUS"] = "Aktif"
                     
                     if "JENIS KELAMIN" in df_upload.columns:
-                        df_upload["JENIS KELAMIN"] = df_upload["JENIS KELAMIN"].str.strip().str.capitalize()
+                        df_upload["JENIS KELAMIN"] = df_upload["JENIS KELAMIN"].str.strip().str.upper()
 
                     if "TGL LAHIR" in df_upload.columns:
                         df_upload["TGL LAHIR"] = df_upload["TGL LAHIR"].apply(bersihkan_tanggal_indo)

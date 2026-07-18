@@ -309,7 +309,7 @@ if not df_santri.empty:
     list_kelas_terdeteksi = sorted([x for x in df_santri["KELAS"].unique() if x and x not in ["nan", "🔴 BELUM LENGKAP", "[Belum Lengkap]"]])
 else: list_kelas_terdeteksi = []
 if not list_kelas_terdeteksi:
-    list_kelas_terdeteksi = ["Kelas Ibtida'iyah", "Kelas Al Jurumiyah", "Kelas As Shorfu", "Kelas Al Fiyah", "Kelas Fathul Wahab"]
+    list_kelas_terdeteksi = ["Kelas As Shifir", "Kelas Ibtida'iyah", "Kelas Al Jurumiyah", "Kelas As Shorfu", "Kelas Al Fiyah", "Kelas Fathul Wahab", "Kelas Al Makhali"]
 
 # LOGIKA KAKAK BERADIK GLOBAL PESANTREN
 kk_santri = []

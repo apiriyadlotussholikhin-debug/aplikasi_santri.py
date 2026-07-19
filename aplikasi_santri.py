@@ -1,14 +1,9 @@
 import subprocess
 import sys
 
-# Trik otomatis install jika library belum ada
-try:
-    import xlsxwriter
-except ImportError:
-    # subprocess.check_call([sys.executable, "-m", "pip", "install", "xlsxwriter"])
-
 import streamlit as st
 import pandas as pd
+import openpyxl
 import os
 import shutil
 from datetime import datetime

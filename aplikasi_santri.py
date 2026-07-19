@@ -69,6 +69,17 @@ with st.sidebar:
 
     st.write("---")
 
+    # ==================================================================
+    # REFRESH GLOBAL (UNTUK MULTI-USER/KOMPUTER 1, 2, 3) - VERSI AMAN TOTAL
+    # ==================================================================
+    st.subheader("🔄 Sinkronisasi Sistem")
+    
+    if st.button("🔄 Refresh Semua Data", use_container_width=True):
+        # Beri notifikasi melayang di layar
+        st.toast("⚡ Menyinkronkan data terbaru dari komputer lain...")
+        time.sleep(0.5)
+        # Paksa Streamlit mengulang skrip dari atas dan membaca ulang semua CSV
+        st.rerun()
 # ==========================================
 # 1. KONFIGURASI UTAMA & DEKLARASI FILE
 # ==========================================
@@ -223,7 +234,7 @@ def load_data_asatidz():
                 if col not in df.columns:
                     if col == "NIU": df[col] = "TEMP_GURU"
                     elif col == "STATUS": df[col] = "Aktif"
-                    elif col == "JENIS KELAMIN": df[col] = "Ustadz"
+                    elif col == "JENIS KELAMIN": df[col] = "USTADZ"
                     else: df[col] = "🔴 BELUM LENGKAP"
                 else:
                     df[col] = df[col].fillna("🔴 BELUM LENGKAP").astype(str).str.strip()
@@ -233,9 +244,9 @@ def load_data_asatidz():
                 df.loc[~df["STATUS"].isin(["Aktif", "Keluar", "Lulus"]), "STATUS"] = "Aktif"
 
             if "JENIS KELAMIN" in df.columns:
-                df["JENIS KELAMIN"] = df["JENIS KELAMIN"].str.strip().str.capitalize()
-                df.loc[df["JENIS KELAMIN"].isin(["Putra", "Laki-laki", "Ustadz"]), "JENIS KELAMIN"] = "Ustadz"
-                df.loc[df["JENIS KELAMIN"].isin(["Putri", "Perempuan", "Ustadzah"]), "JENIS KELAMIN"] = "Ustadzah"
+                df["JENIS KELAMIN"] = df["JENIS KELAMIN"].str.strip().str.upper()
+                df.loc[df["JENIS KELAMIN"].isin(["Putra", "Laki-laki", "USTADZ"]), "JENIS KELAMIN"] = "USTADZ"
+                df.loc[df["JENIS KELAMIN"].isin(["Putri", "Perempuan", "USTADZAH"]), "JENIS KELAMIN"] = "USTADZAH"
                 
             for c_num in ["NIU", "NIK", "KK"]:
                 if c_num in df.columns:
@@ -398,8 +409,8 @@ with tab_dash:
         
     col_p1.info(f"👦 **SANTRI PUTRA:** {s_putra} Orang")
     col_p2.info(f"👧 **SANRTI PUTRI:** {s_putri} Orang")
-    col_p3.success(f"👳 **Ustadz (Guru L):** {u_ustadz} Orang")
-    col_p4.success(f"🧕 **Ustadzah (Guru P):** {u_ustadzah} Orang")
+    col_p3.success(f"👳 **Ustadz:** {u_ustadz} Orang")
+    col_p4.success(f"🧕 **Ustadzah:** {u_ustadzah} Orang")
     
     st.write("---")
     st.subheader("🔍 Cek Data Cepat dari Dashboard")
@@ -783,7 +794,7 @@ with tab_asatidz_panel:
             with as1:
                 niu_guru = st.text_input("NIU (Nomor Induk Ustadz)")
                 nama_guru = st.text_input("NAMA USTADZ/AH*")
-                jk_guru = st.selectbox("JENIS KELAMIN", ["Ustadz", "Ustadzah"])
+                jk_guru = st.selectbox("JENIS KELAMIN", ["USTADZ", "USTADZAH"])
                 jabatan_guru = st.text_input("TUGAS/JABATAN")
                 nik_guru = st.text_input("NIK GURU")
             with as2:
@@ -830,7 +841,7 @@ with tab_asatidz_panel:
                     for col in KOLOM_ASATIDZ:
                         if col not in df_upload_as.columns:
                             if col == "STATUS": df_upload_as[col] = "Aktif"
-                            elif col == "JENIS KELAMIN": df_upload_as[col] = "Ustadz"
+                            elif col == "JENIS KELAMIN": df_upload_as[col] = "USTADZ"
                             else: df_upload_as[col] = "🔴 BELUM LENGKAP"
                         else:
                             df_upload_as[col] = df_upload_as[col].astype(str).str.replace("nan", "🔴 BELUM LENGKAP", regex=False).str.strip()
@@ -841,8 +852,8 @@ with tab_asatidz_panel:
                     
                     if "JENIS KELAMIN" in df_upload_as.columns:
                         df_upload_as["JENIS KELAMIN"] = df_upload_as["JENIS KELAMIN"].str.strip().str.upper()
-                        df_upload_as.loc[df_upload_as["JENIS KELAMIN"].isin(["Putra", "Laki-laki", "Ustadz"]), "JENIS KELAMIN"] = "Ustadz"
-                        df_upload_as.loc[df_upload_as["JENIS KELAMIN"].isin(["Putri", "Perempuan", "Ustadzah"]), "JENIS KELAMIN"] = "Ustadzah"
+                        df_upload_as.loc[df_upload_as["JENIS KELAMIN"].isin(["USTADZ"]), "JENIS KELAMIN"] = "USTADZ"
+                        df_upload_as.loc[df_upload_as["JENIS KELAMIN"].isin(["USTADZAH"]), "JENIS KELAMIN"] = "USTADZAH"
 
                     if "TGL LAHIR" in df_upload_as.columns:
                         df_upload_as["TGL LAHIR"] = df_upload_as["TGL LAHIR"].apply(bersihkan_tanggal_indo)
@@ -883,7 +894,7 @@ with tab_asatidz_panel:
         with eg1:
             eg_nama = st.text_input("Ubah Nama Ustadz/ah", value=g_k_g(dg["NAMA USTADZ/AH"]))
             eg_niu = st.text_input("Ubah NIU", value=g_k_g(dg["NIU"]))
-            eg_jk = st.selectbox("Ubah Jenis Kelamin", ["Ustadz", "Ustadzah"], index=0 if dg["JENIS KELAMIN"] == "Ustadz" else 1)
+            eg_jk = st.selectbox("Ubah Jenis Kelamin", ["USTADZ", "USTADZAH"], index=0 if dg["JENIS KELAMIN"] == "USTADZ" else 1)
             eg_jbt = st.text_input("Ubah Tugas/Jabatan", value=g_k_g(dg["TUGAS/JABATAN"]))
             eg_nik = st.text_input("Ubah NIK", value=g_k_g(dg["NIK"]))
         with eg2:

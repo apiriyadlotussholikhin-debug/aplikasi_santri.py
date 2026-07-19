@@ -5,7 +5,7 @@ import sys
 try:
     import xlsxwriter
 except ImportError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "xlsxwriter"])
+    # subprocess.check_call([sys.executable, "-m", "pip", "install", "xlsxwriter"])
 
 import streamlit as st
 import pandas as pd

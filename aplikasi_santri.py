@@ -3,6 +3,46 @@ import sys
 
 import streamlit as st
 import pandas as pd
+
+# 1. Konfigurasi Halaman Web
+st.set_page_config(page_title="Aplikasi Data Santri", page_icon="📝", layout="wide")
+
+st.title("📝 Sistem Informasi & Data Santri")
+
+# 2. Ambil Link Google Sheets dari Secrets Streamlit
+try:
+    # Mengambil URL sheet dari sistem Secrets yang sudah kamu isi kemarin
+    sheet_url = st.secrets["connections"]["gsheets"]["spreadsheet"]
+    
+    # Mengubah link biasa menjadi link download format CSV agar bisa dibaca kilat oleh Pandas
+    # Cara ini otomatis membaca Sheet1 / Tab pertama paling kiri
+    csv_url = sheet_url.replace("/edit?usp=sharing", "/export?format=csv").replace("/edit#gid=", "/export?format=csv&gid=")
+    
+    # Membaca data langsung dari Google Sheets
+    df = pd.read_csv(csv_url)
+    
+    # 3. Menampilkan Data ke Website
+    if df is not None and not df.empty:
+        total_santri = len(df)
+        
+        # Nampilin indikator angka total data
+        st.metric(label="Total Data Santri", value=f"{total_santri} Orang")
+        
+        st.subheader("Tabel Data Santri")
+        # Menampilkan tabel data yang rapi dan bisa difilter di web
+        st.data_editor(df, use_container_width=True)
+        
+    else:
+        st.warning("File Google Sheets terbaca, tapi isinya kosong, Bro.")
+
+except Exception as e:
+    st.error("Gagal menarik data dari Google Sheets.")
+    st.write("Yuk cek kembali kotak **Secrets** di Streamlit Cloud, pastikan formatnya sudah seperti ini:")
+    st.code("""
+[connections.gsheets]
+spreadsheet = "https://docs.google.com/spreadsheets/d/link_kamu_disini"
+    """, language="toml")
+    st.caption(f"Detail kendala: {e}")
 import openpyxl
 import os
 import shutil

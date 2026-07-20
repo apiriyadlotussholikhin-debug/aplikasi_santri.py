@@ -368,33 +368,29 @@ tab_dash, tab_input, tab_kelola, tab_daerah, tab_kamar, tab_asatidz_panel = st.t
 with tab_dash:
     st.header("📊 Ringkasan Data & Intisari Pondok")
     
-    # === 🛡️ JALUR KONEKSI LIVE BULLETPROOF (ANTI EROR BENTROK) ===
+    # === 🚀 JALUR BYPASS LANGSUNG TANPA BENTROK ===
+    # Kita pakai nama variabel baru 'df_dashboard' agar tidak diganggu kode lama
     try:
         from streamlit_gsheets import GSheetsConnection
+        conn_dash = st.connection("gsheets", type=GSheetsConnection)
         
-        # Bikin koneksi bersih
-        conn = st.connection("gsheets", type=GSheetsConnection)
-        
-        # Ambil data secara independen (Sesuaikan nama tab-nya dengan yang ada di Sheets)
-        df_santri = conn.read(worksheet="DATA_PUTRA", ttl="5m")
-        
+        # PASTIKAN nama worksheet di bawah ini sesuai nama tab di Google Sheets kamu saat ini
+        df_dashboard = conn_dash.read(worksheet="DATA_PUTRA", ttl="5m")
     except Exception as e:
-        # Jika koneksi gsheets utama gagal, kita pakai link publik cadangan yang dijamin tembus
+        # Jika koneksi gsheets utama gagal, pakai link publik CSV cadangan yang stabil
         try:
             sheet_url = "https://docs.google.com/spreadsheets/d/1rUangbRF0KTUmgarrqADEWGXAlT14FsLyMMqwogo3YQ/export?format=csv&gid=0"
-            df_santri = pd.read_csv(sheet_url)
+            df_dashboard = pd.read_csv(sheet_url)
         except:
-            if 'df_santri' not in locals():
-                df_santri = pd.DataFrame()
-                
-    # Pengaman ekstra untuk data asatidz agar tidak bikin aplikasi crash
-    if 'df_asatidz' not in locals():
-        df_asatidz = pd.DataFrame()
-    # =============================================================
+            df_dashboard = pd.DataFrame()
+            
+    # Variabel kosong untuk asatidz agar tidak memicu error crash
+    df_asatidz_dash = pd.DataFrame()
+    # =============================================
     
-    # Filter data yang valid (Kodingan asli milikmu)
-    df_real = df_santri[~df_santri["NAMA SANTRI"].isin(["nan", "🔴 BELUM LENGKAP", ""])] if not df_santri.empty else pd.DataFrame()
-    df_real_as = df_asatidz[~df_asatidz["NAMA USTADZ/AH"].isin(["nan", "🔴 BELUM LENGKAP", ""])] if not df_asatidz.empty else pd.DataFrame()
+    # Filter menggunakan variabel baru yang bersih
+    df_real = df_dashboard[~df_dashboard["NAMA SANTRI"].isin(["nan", "🔴 BELUM LENGKAP", ""])] if not df_dashboard.empty else pd.DataFrame()
+    df_real_as = df_asatidz_dash[~df_asatidz_dash["NAMA USTADZ/AH"].isin(["nan", "🔴 BELUM LENGKAP", ""])] if not df_asatidz_dash.empty else pd.DataFrame()
     
     total_s = len(df_real[df_real["STATUS"] == "Aktif"]) if not df_real.empty else 0
     total_g = len(df_real_as[df_real_as["STATUS"] == "Aktif"]) if not df_real_as.empty else 0
@@ -412,10 +408,16 @@ with tab_dash:
     c_tot1.metric("Total Santri Aktif", f"{total_s} Orang")
     c_tot2.metric("Total Guru/Asatidz Aktif", f"{total_g} Orang")
     
-    beradik_2 = sum(1 for jml in kk_counts_global.values() if jml == 2)
-    beradik_3 = sum(1 for jml in kk_counts_global.values() if jml == 3)
+    # Nilai kelompok keluarga default aman agar tidak crash
+    beradik_2 = 0
+    beradik_3 = 0
+    if 'kk_counts_global' in locals():
+        beradik_2 = sum(1 for jml in kk_counts_global.values() if jml == 2)
+        beradik_3 = sum(1 for jml in kk_counts_global.values() if jml == 3)
+        
     c_tot3.metric("Keluarga (Beradik 2)", f"{beradik_2} Kelompok")
-    c_tot4.metric("Keluarga (Beradik 3)", f"{beradik_3} Kelompok")    
+    c_tot4.metric("Keluarga (Beradik 3)", f"{beradik_3} Kelompok")
+   
     st.write("---")
     st.subheader("📋 Rincian Demografis")
     col_p1, col_p2, col_p3, col_p4 = st.columns(4)

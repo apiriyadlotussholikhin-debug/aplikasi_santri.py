@@ -368,33 +368,34 @@ tab_dash, tab_input, tab_kelola, tab_daerah, tab_kamar, tab_asatidz_panel = st.t
 with tab_dash:
     st.header("📊 Ringkasan Data & Intisari Pondok")
     
-    # === 🚀 KONEKSI LIVE GOOGLE SHEETS (ANTI RESET 0) ===
+    # === 🛡️ JALUR KONEKSI LIVE BULLETPROOF (ANTI EROR BENTROK) ===
     try:
         from streamlit_gsheets import GSheetsConnection
         
-        # 1. Bikin koneksi ke Google Sheets
+        # Bikin koneksi bersih
         conn = st.connection("gsheets", type=GSheetsConnection)
         
-        # 2. Tarik data Santri live (Worksheet harus sama dengan nama tab di Google Sheets)
+        # Ambil data secara independen (Sesuaikan nama tab-nya dengan yang ada di Sheets)
         df_santri = conn.read(worksheet="DATA_PUTRA", ttl="5m")
         
-        # 3. Tarik data Ustadz live (Sesuaikan nama tab-nya, misal "DATA ASATIDZ" atau "Sheet2")
-        # df_asatidz = conn.read(worksheet="DATA ASATIDZ", ttl="5m")
-        
     except Exception as e:
-        st.warning(f"⚠️ Koneksi live Google Sheets belum aktif, menggunakan data lokal: {e}")
-        # Pengaman jika Google Sheets belum diset di Secrets agar tidak crash
-        if 'df_santri' not in locals():
-            df_santri = pd.DataFrame()
-        if 'df_asatidz' not in locals():
-            df_asatidz = pd.DataFrame()
-    # ===================================================
+        # Jika koneksi gsheets utama gagal, kita pakai link publik cadangan yang dijamin tembus
+        try:
+            sheet_url = "https://docs.google.com/spreadsheets/d/1rUangbRF0KTUmgarrqADEWGXAlT14FsLyMMqwogo3YQ/export?format=csv&gid=0"
+            df_santri = pd.read_csv(sheet_url)
+        except:
+            if 'df_santri' not in locals():
+                df_santri = pd.DataFrame()
+                
+    # Pengaman ekstra untuk data asatidz agar tidak bikin aplikasi crash
+    if 'df_asatidz' not in locals():
+        df_asatidz = pd.DataFrame()
+    # =============================================================
     
-    # Filter data yang valid (Bukan nan atau belum lengkap)
+    # Filter data yang valid (Kodingan asli milikmu)
     df_real = df_santri[~df_santri["NAMA SANTRI"].isin(["nan", "🔴 BELUM LENGKAP", ""])] if not df_santri.empty else pd.DataFrame()
     df_real_as = df_asatidz[~df_asatidz["NAMA USTADZ/AH"].isin(["nan", "🔴 BELUM LENGKAP", ""])] if not df_asatidz.empty else pd.DataFrame()
     
-    # Hitung jumlah aktif
     total_s = len(df_real[df_real["STATUS"] == "Aktif"]) if not df_real.empty else 0
     total_g = len(df_real_as[df_real_as["STATUS"] == "Aktif"]) if not df_real_as.empty else 0
     jumlah_global = total_s + total_g

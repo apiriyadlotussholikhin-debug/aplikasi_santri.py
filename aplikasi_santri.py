@@ -367,9 +367,34 @@ tab_dash, tab_input, tab_kelola, tab_daerah, tab_kamar, tab_asatidz_panel = st.t
 # ------------------------------------------
 with tab_dash:
     st.header("📊 Ringkasan Data & Intisari Pondok")
+    
+    # === 🚀 KONEKSI LIVE GOOGLE SHEETS (ANTI RESET 0) ===
+    try:
+        from streamlit_gsheets import GSheetsConnection
+        
+        # 1. Bikin koneksi ke Google Sheets
+        conn = st.connection("gsheets", type=GSheetsConnection)
+        
+        # 2. Tarik data Santri live (Worksheet harus sama dengan nama tab di Google Sheets)
+        df_santri = conn.read(worksheet="DATA PUTRA", ttl="5m")
+        
+        # 3. Tarik data Ustadz live (Sesuaikan nama tab-nya, misal "DATA ASATIDZ" atau "Sheet2")
+        # df_asatidz = conn.read(worksheet="DATA ASATIDZ", ttl="5m")
+        
+    except Exception as e:
+        st.warning(f"⚠️ Koneksi live Google Sheets belum aktif, menggunakan data lokal: {e}")
+        # Pengaman jika Google Sheets belum diset di Secrets agar tidak crash
+        if 'df_santri' not in locals():
+            df_santri = pd.DataFrame()
+        if 'df_asatidz' not in locals():
+            df_asatidz = pd.DataFrame()
+    # ===================================================
+    
+    # Filter data yang valid (Bukan nan atau belum lengkap)
     df_real = df_santri[~df_santri["NAMA SANTRI"].isin(["nan", "🔴 BELUM LENGKAP", ""])] if not df_santri.empty else pd.DataFrame()
     df_real_as = df_asatidz[~df_asatidz["NAMA USTADZ/AH"].isin(["nan", "🔴 BELUM LENGKAP", ""])] if not df_asatidz.empty else pd.DataFrame()
     
+    # Hitung jumlah aktif
     total_s = len(df_real[df_real["STATUS"] == "Aktif"]) if not df_real.empty else 0
     total_g = len(df_real_as[df_real_as["STATUS"] == "Aktif"]) if not df_real_as.empty else 0
     jumlah_global = total_s + total_g
@@ -389,8 +414,7 @@ with tab_dash:
     beradik_2 = sum(1 for jml in kk_counts_global.values() if jml == 2)
     beradik_3 = sum(1 for jml in kk_counts_global.values() if jml == 3)
     c_tot3.metric("Keluarga (Beradik 2)", f"{beradik_2} Kelompok")
-    c_tot4.metric("Keluarga (Beradik 3)", f"{beradik_3} Kelompok")
-    
+    c_tot4.metric("Keluarga (Beradik 3)", f"{beradik_3} Kelompok")    
     st.write("---")
     st.subheader("📋 Rincian Demografis")
     col_p1, col_p2, col_p3, col_p4 = st.columns(4)

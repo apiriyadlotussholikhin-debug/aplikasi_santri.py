@@ -376,7 +376,7 @@ with tab_dash:
         conn = st.connection("gsheets", type=GSheetsConnection)
         
         # 2. Tarik data Santri live (Worksheet harus sama dengan nama tab di Google Sheets)
-        df_santri = conn.read(worksheet="DATA PUTRA", ttl="5m")
+        df_santri = conn.read(worksheet="DATA_PUTRA", ttl="5m")
         
         # 3. Tarik data Ustadz live (Sesuaikan nama tab-nya, misal "DATA ASATIDZ" atau "Sheet2")
         # df_asatidz = conn.read(worksheet="DATA ASATIDZ", ttl="5m")

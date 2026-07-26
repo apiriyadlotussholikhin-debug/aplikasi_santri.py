@@ -8,6 +8,10 @@ import os
 import shutil
 from datetime import datetime
 import time
+from streamlit_gsheets import GSheetsConnection
+
+# Inisialisasi Koneksi Google Sheets
+conn = st.connection("gsheets", type=GSheetsConnection)
 import io  # Ditambahkan untuk handle eksport ke Excel asli
 
 # =========================================================
@@ -172,43 +176,96 @@ def bersihkan_tanggal_indo(tgl_str):
         return "🔴 BELUM LENGKAP"
     except: return "🔴 BELUM LENGKAP"
 
+# ==========================================
+# 3. ENGINE LOADER & SAVER (VERSI GOOGLE SHEETS)
+# ==========================================
 def load_data_santri():
     df_kosong = pd.DataFrame(columns=KOLOM_SANTRI)
-    if os.path.exists(FILE_SANTRI):
-        try:
-            # Membaca sebagai string sejak awal agar terhindar dari desimal otomatis
-            df = pd.read_csv(FILE_SANTRI, sep=',', encoding='utf-8-sig', dtype=str)
-            df.columns = df.columns.str.upper().str.strip()
-            if "NAMA SANTRI" not in df.columns or len(df.columns) <= 1:
-                df = pd.read_csv(FILE_SANTRI, sep=';', encoding='utf-8-sig', dtype=str)
-                df.columns = df.columns.str.upper().str.strip()
-            
-            for col in KOLOM_SANTRI:
-                if col not in df.columns:
-                    if col == "KAMAR": df[col] = "Belum Diatur"
-                    elif col == "STATUS": df[col] = "Aktif"
-                    elif col == "JENIS KELAMIN": df[col] = "Putra"
-                    else: df[col] = "🔴 BELUM LENGKAP"
-                else:
-                    df[col] = df[col].fillna("🔴 BELUM LENGKAP").astype(str).str.strip()
+    try:
+        # Membaca live dari Google Sheets tab 'DATA_PUTRA' (atau sesuaikan nama tab-nya)
+        df = conn.read(worksheet="DATA_PUTRA", ttl="0")
+        df.columns = df.columns.str.upper().str.strip()
+        
+        for col in KOLOM_SANTRI:
+            if col not in df.columns:
+                if col == "KAMAR": df[col] = "Belum Diatur"
+                elif col == "STATUS": df[col] = "Aktif"
+                elif col == "JENIS KELAMIN": df[col] = "Putra"
+                else: df[col] = "🔴 BELUM LENGKAP"
+            else:
+                df[col] = df[col].fillna("🔴 BELUM LENGKAP").astype(str).str.strip()
+
+        # Filter Saringan Akses Login (Tetap menggunakan logika login sakti milikmu)
+        if not df.empty and "JENIS KELAMIN" in df.columns:
+            akses_login = str(st.session_state.get("hak_akses", ""))
+            if "Putra" in akses_login:
+                df = df[df["JENIS KELAMIN"].astype(str).str.upper().isin(["PUTRA"])]
+            elif "Putri" in akses_login:
+                df = df[df["JENIS KELAMIN"].astype(str).str.upper().isin(["PUTRI"])]
+
+        return df
+    except Exception as e:
+        return df_kosong
+
+def load_data_asatidz():
+    df_kosong = pd.DataFrame(columns=KOLOM_ASATIDZ)
+    try:
+        # Membaca live dari Google Sheets tab 'DATA_ASATIDZ'
+        df = conn.read(worksheet="DATA_ASATIDZ", ttl="0")
+        df.columns = df.columns.str.upper().str.strip()
+        
+        for col in KOLOM_ASATIDZ:
+            if col not in df.columns:
+                if col == "NIU": df[col] = "TEMP_GURU"
+                elif col == "STATUS": df[col] = "Aktif"
+                elif col == "JENIS KELAMIN": df[col] = "USTADZ"
+                else: df[col] = "🔴 BELUM LENGKAP"
+            else:
+                df[col] = df[col].fillna("🔴 BELUM LENGKAP").astype(str).str.strip()
+
+        # Filter Saringan Akses Login
+        if not df.empty and "JENIS KELAMIN" in df.columns:
+            akses_login = str(st.session_state.get("hak_akses", ""))
+            if "Putra" in akses_login:
+                df = df[df["JENIS KELAMIN"].isin(["Ustadz", "Putra", "USTADZ"])]
+            elif "Putri" in akses_login:
+                df = df[df["JENIS KELAMIN"].isin(["Ustadzah", "Putri", "USTADZAH"])]
+
+        return df[KOLOM_ASATIDZ]
+    except Exception as e:
+        return df_kosong
+
+def save_all(df, filename):
+    # Menyimpan data langsung ke Google Sheets secara realtime (Auto-Save Abadi)
+    try:
+        if "santri" in filename.lower():
+            conn.update(worksheet="DATA_PUTRA", data=df)
+        elif "asatidz" in filename.lower():
+            conn.update(worksheet="DATA_ASATIDZ", data=df)
+        st.toast("✅ Perubahan tersimpan abadi di Google Sheets!", icon="💾")
+    except Exception as e:
+        st.error(f"Gagal menyimpan ke Google Sheets: {e}")
+	
 
             # =====================================================================
-            # 🗂️ KODE SARINGAN DATA SANTRI (FIX LOGIN SAKTI)
-            # =====================================================================
-            if not df.empty and "JENIS KELAMIN" in df.columns:
-                akses_login = str(st.session_state.get("hak_akses", ""))
-                # Pakai "in" karena statusnya mengandung kata "Putra dan Ustadz"
-                if "Putra" in akses_login:
-                    df = df[df["JENIS KELAMIN"].astype(str).str.upper().isin(["PUTRA"])]
-                elif "Putri" in akses_login:
-                    df = df[df["JENIS KELAMIN"].astype(str).str.upper().isin(["PUTRI"])]
+        # 🗂️ KODE SARINGAN DATA SANTRI (FIX LOGIN SAKTI)
+        # =====================================================================
+        if not df.empty and "JENIS KELAMIN" in df.columns:
+            akses_login = str(st.session_state.get("hak_akses", ""))
+            # Pakai "in" karena statusnya mengandung kata "Putra dan Ustadz"
+            if "Putra" in akses_login:
+                df = df[df["JENIS KELAMIN"].astype(str).str.upper().isin(["PUTRA"])]
+            elif "Putri" in akses_login:
+                df = df[df["JENIS KELAMIN"].astype(str).str.upper().isin(["PUTRI"])]
 
-            return df
-            
-        except Exception as e:
-            st.error(f"Gagal membaca file santri: {e}")
-            return df_kosong
+        return df
+
+    except Exception as e:
+        st.error(f"Gagal membaca file santri: {e}")
+        return df_kosong
+
     return df_kosong
+
 
 def load_data_asatidz():
     df_kosong = pd.DataFrame(columns=KOLOM_ASATIDZ)
@@ -227,10 +284,14 @@ def load_data_asatidz():
             
             for col in KOLOM_ASATIDZ:
                 if col not in df.columns:
-                    if col == "NIU": df[col] = "TEMP_GURU"
-                    elif col == "STATUS": df[col] = "Aktif"
-                    elif col == "JENIS KELAMIN": df[col] = "USTADZ"
-                    else: df[col] = "🔴 BELUM LENGKAP"
+                    if col == "NIU": 
+                        df[col] = "TEMP_GURU"
+                    elif col == "STATUS": 
+                        df[col] = "Aktif"
+                    elif col == "JENIS KELAMIN": 
+                        df[col] = "USTADZ"
+                    else: 
+                        df[col] = "🔴 BELUM LENGKAP"
                 else:
                     df[col] = df[col].fillna("🔴 BELUM LENGKAP").astype(str).str.strip()
             
@@ -240,53 +301,36 @@ def load_data_asatidz():
 
             if "JENIS KELAMIN" in df.columns:
                 df["JENIS KELAMIN"] = df["JENIS KELAMIN"].str.strip().str.upper()
-                df.loc[df["JENIS KELAMIN"].isin(["Putra", "Laki-laki", "USTADZ"]), "JENIS KELAMIN"] = "USTADZ"
-                df.loc[df["JENIS KELAMIN"].isin(["Putri", "Perempuan", "USTADZAH"]), "JENIS KELAMIN"] = "USTADZAH"
+                df.loc[df["JENIS KELAMIN"].isin(["PUTRA", "LAKI-LAKI", "USTADZ"]), "JENIS KELAMIN"] = "USTADZ"
+                df.loc[df["JENIS KELAMIN"].isin(["PUTRI", "PEREMPUAN", "USTADZAH"]), "JENIS KELAMIN"] = "USTADZAH"
                 
             for c_num in ["NIU", "NIK", "KK"]:
                 if c_num in df.columns:
                     df[c_num] = df[c_num].astype(str).str.replace(".0", "", regex=False).str.replace("nan", "🔴 BELUM LENGKAP", regex=False).str.strip()
                     df[c_num] = df[c_num].apply(lambda x: x.split('.')[0] if '.' in x and x.split('.')[1] == '0' else x)
 
-            # =====================================================================
-            # 🗂️ KODE SARINGAN DATA ASATIDZ (FIX LOGIN SAKTI)
-            # =====================================================================
-            if not df.empty and "JENIS KELAMIN" in df.columns:
-                akses_login = str(st.session_state.get("hak_akses", ""))
-                # Pakai "in" karena statusnya mengandung kata "Putra dan Ustadz"
-                if "Putra" in akses_login:
-                    df = df[df["JENIS KELAMIN"].isin(["Ustadz", "Putra"])]
-                elif "Putri" in akses_login:
-                    df = df[df["JENIS KELAMIN"].isin(["Ustadzah", "Putri"])]
+            return df
 
-            return df[KOLOM_ASATIDZ]
-        except: 
+        except Exception as e:
+            st.error(f"Gagal membaca file asatidz: {e}")
             return df_kosong
+
     return df_kosong
 
+# ==========================================
+# 📋 DUMMY / FALLBACK PENGURUS KAMAR
+# ==========================================
 def load_pengurus_kamar():
-    if os.path.exists(FILE_PENGURUS_KAMAR):
-        try: return pd.read_csv(FILE_PENGURUS_KAMAR, index_col="KAMAR", sep=',')
-        except: pass
-    df_pk = pd.DataFrame(index=DAFTAR_KAMAR, columns=["KETUA", "WAKIL"]).fillna("-")
-    df_pk.index.name = "KAMAR"
-    return df_pk
+    """Fungsi pembaca data pengurus kamar dengan fallback DataFrame kosong jika belum ada file"""
+    df_kosong = pd.DataFrame(columns=["NIU", "NAMA", "KAMAR", "JABATAN"])
+    try:
+        if os.path.exists("pengurus_kamar.csv"):
+            return pd.read_csv("pengurus_kamar.csv", dtype=str)
+        return df_kosong
+    except Exception as e:
+        st.error(f"Gagal membaca data pengurus kamar: {e}")
+        return df_kosong
 
-def save_all(df, filename):
-    jalankan_auto_backup(filename, "sebelum")
-    df.to_csv(filename, index=True if "data_pengurus_kamar" in filename else False, sep=',', encoding='utf-8-sig')
-
-def tampilkan_notifikasi_sukses():
-    st.toast("PERUBAHAN BERHASIL!", icon="✅")
-    st.success("✅ PERUBAHAN BERHASIL!")
-    time.sleep(1)
-
-# Fungsi Generator konversi ke Excel Asli (.xlsx) tanpa merusak teks KK/NIK
-def konversi_ke_excel_asli(df_input):
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df_input.to_excel(writer, index=False, sheet_name='Data_Pesantren')
-    return output.getvalue()
 
 # ==========================================
 # 📋 AMBIL MEMORI DATA AKTIF & FILTER AKSES
@@ -303,28 +347,33 @@ if "PUSAT" in status_login_global or "SUPER" in status_login_global:
     # JIKA ADMIN PUSAT/SUPERADMIN: JANGAN DI-FILTER, BIARKAN SEMUA DATA MUNCUL
     pass
 elif "PUTRA" in status_login_global:
-    # JIKA ADMIN PUTRA: HANYA TAMPILKAN USTADZ
+    # JIKA ADMIN PUTRA: HANYA TAMPILKAN USTADZ (Sesuaikan dengan kapital "USTADZ")
     if not df_asatidz.empty and "JENIS KELAMIN" in df_asatidz.columns:
-        df_asatidz = df_asatidz[df_asatidz["JENIS KELAMIN"] == "Ustadz"]
+        df_asatidz = df_asatidz[df_asatidz["JENIS KELAMIN"].str.upper() == "USTADZ"]
 elif "PUTRI" in status_login_global:
-    # JIKA ADMIN PUTRI: HANYA TAMPILKAN USTADZAH
+    # JIKA ADMIN PUTRI: HANYA TAMPILKAN USTADZAH (Sesuaikan dengan kapital "USTADZAH")
     if not df_asatidz.empty and "JENIS KELAMIN" in df_asatidz.columns:
-        df_asatidz = df_asatidz[df_asatidz["JENIS KELAMIN"] == "Ustadzah"]
+        df_asatidz = df_asatidz[df_asatidz["JENIS KELAMIN"].str.upper() == "USTADZAH"]
 
-if not df_santri.empty:
-    list_kelas_terdeteksi = sorted([x for x in df_santri["KELAS"].unique() if x and x not in ["nan", "🔴 BELUM LENGKAP", "[Belum Lengkap]"]])
-else: list_kelas_terdeteksi = []
+if not df_santri.empty and "KELAS" in df_santri.columns:
+    list_kelas_terdeteksi = sorted([x for x in df_santri["KELAS"].unique() if x and str(x).strip() not in ["nan", "🔴 BELUM LENGKAP", "[Belum Lengkap]"]])
+else:
+    list_kelas_terdeteksi = []
+
 if not list_kelas_terdeteksi:
-    list_kelas_terdeteksi = ["Kelas As Shifir", "Kelas Ibtida'iyah", "Kelas Al Jurumiyah", "Kelas As Shorfu", "Kelas Al Fiyah", "Kelas Fathul Wahab", "Kelas Al Makhali"]
+    list_kelas_terdeteksi = [
+        "Kelas As Shifir", "Kelas Ibtida'iyah", "Kelas Al Jurumiyah", 
+        "Kelas As Shorfu", "Kelas Al Fiyah", "Kelas Fathul Wahab", "Kelas Al Makhali"
+    ]
 
 # LOGIKA KAKAK BERADIK GLOBAL PESANTREN
 kk_santri = []
-if not df_santri.empty:
+if not df_santri.empty and "KK" in df_santri.columns and "STATUS" in df_santri.columns:
     df_s_valid = df_santri[(df_santri["KK"] != "🔴 BELUM LENGKAP") & (df_santri["STATUS"] == "Aktif")]
     kk_santri = df_s_valid["KK"].tolist()
 
 kk_asatidz = []
-if not df_asatidz.empty:
+if not df_asatidz.empty and "KK" in df_asatidz.columns and "STATUS" in df_asatidz.columns:
     df_a_valid = df_asatidz[(df_asatidz["KK"] != "🔴 BELUM LENGKAP") & (df_asatidz["STATUS"] == "Aktif")]
     kk_asatidz = df_a_valid["KK"].tolist()
 
@@ -335,8 +384,8 @@ for kk in semua_kk_global:
     kk_counts_global[kk] = kk_counts_global.get(kk, 0) + 1
 
 def beri_tanda_saudara_global(row):
-    kk = row["KK"]
-    status = row["STATUS"]
+    kk = row.get("KK", "")
+    status = row.get("STATUS", "")
     if status == "Aktif" and kk in kk_counts_global and kk_counts_global[kk] > 1:
         return f"👥 Beradik-{kk_counts_global[kk]} (Global)"
     return "Mandiri"
@@ -350,7 +399,6 @@ if not df_asatidz.empty:
     df_asatidz["HUBUNGAN"] = df_asatidz.apply(beri_tanda_saudara_global, axis=1)
 else:
     df_asatidz["HUBUNGAN"] = "Mandiri"
-
 # ==========================================
 # 4. INTERFACE STRUKTUR TAB UTAMA
 # ==========================================

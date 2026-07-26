@@ -1,5 +1,5 @@
 streamlit
+streamlit-gsheets
+xlsxwriter
 pandas
 openpyxl
-st-gsheets-connection
-xlsxwriter

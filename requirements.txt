@@ -1,4 +1,4 @@
-streamlit_gsheets
+streamlit
 gspread
 google-auth
 pandas

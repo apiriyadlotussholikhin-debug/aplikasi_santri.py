@@ -1,5 +1,6 @@
 streamlit
-streamlit-gsheets
-xlsxwriter
+gspread
+google-auth
 pandas
 openpyxl
+XlsxWriter

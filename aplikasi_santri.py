@@ -2,6 +2,24 @@ import subprocess
 import sys
 
 import streamlit as st
+
+# Mencegah browser melakukan Auto-Translate yang bikin UI crash
+st.set_page_config(
+    page_title="Aplikasi Santri",
+    page_icon="🕌",
+    layout="wide"
+)
+
+# Masukkan tag HTML untuk mematikan Google Translate di browser
+st.markdown(
+    """
+    <html lang="id" class="notranslate" translate="no">
+    <head>
+        <meta name="google" content="notranslate" />
+    </head>
+    """,
+    unsafe_allow_html=True
+)
 import pandas as pd
 import openpyxl
 import os

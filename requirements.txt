@@ -1,7 +1,6 @@
-streamlit
+streamlit_gsheets
 gspread
 google-auth
 pandas
 openpyxl
 XlsxWriter
-streamlit_gsheets

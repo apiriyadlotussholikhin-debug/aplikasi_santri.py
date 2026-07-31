@@ -32,6 +32,14 @@ from streamlit_gsheets import GSheetsConnection
 conn = st.connection("gsheets", type=GSheetsConnection)
 import io  # Ditambahkan untuk handle eksport ke Excel asli
 
+# ==========================================
+# FUNGSI NOTIFIKASI SUKSES (TARUH DI SINI)
+# ==========================================
+def tampilkan_notifikasi_sukses():
+    st.toast("✅ PERUBAHAN BERHASIL DISIMPAN!", icon="✅")
+    st.success("✅ PERUBAHAN BERHASIL DISIMPAN!")
+    time.sleep(1)
+
 # =========================================================
 # 🔐 KODE BARU 1: SISTEM KEAMANAN 3 AKUN UTAMA
 # =========================================================

@@ -617,10 +617,13 @@ with tab_input:
                 st.error(f"Gagal membaca file Excel: {e}")
 
 # ------------------------------------------
-# TAB 3: KELOLA DATA SANTRI (WITH UNDO & REDO)
+# TAB 3: KELOLA DATA SANTRI (WITH UNDO & REDO - ANTI CRASH)
 # ------------------------------------------
 with tab_kelola:
     st.header("📋 Daftar & Kelola Data Santri")
+    
+    # 1. Load data santri terbaru & definisikan awal agar anti-NameError
+    df_santri = load_data_santri()
     
     uc1, uc2, uc3 = st.columns([1.5, 1.5, 7])
     with uc1:
@@ -629,38 +632,64 @@ with tab_kelola:
                 st.toast("Undo Berhasil!", icon="🔄")
                 time.sleep(0.5)
                 st.rerun()
-            else: st.info("Tidak ada riwayat Undo")
+            else: 
+                st.info("Tidak ada riwayat Undo")
     with uc2:
         if st.button("↪️ Redo Aksi Santri", use_container_width=True):
             if eksekusi_redo(FILE_SANTRI):
                 st.toast("Redo Berhasil!", icon="🔄")
                 time.sleep(0.5)
                 st.rerun()
-            else: st.info("Tidak ada riwayat Redo")
+            else: 
+                st.info("Tidak ada riwayat Redo")
             
     st.write("---")
-    df_santri_clean = df_santri[df_santri["NAMA SANTRI"].notna() & (df_santri["NAMA SANTRI"] != "") & (df_santri["NAMA SANTRI"] != "🔴 BELUM LENGKAP")]
+    
+    # Filter data santri bersih (Mencegah error jika data masih kosong)
+    if "NAMA SANTRI" in df_santri.columns:
+        df_santri_clean = df_santri[
+            df_santri["NAMA SANTRI"].notna() & 
+            (df_santri["NAMA SANTRI"] != "") & 
+            (df_santri["NAMA SANTRI"] != "🔴 BELUM LENGKAP")
+        ]
+    else:
+        df_santri_clean = pd.DataFrame(columns=KOLOM_SANTRI)
+    
+    # Inisialisasi df_filtered default
+    df_filtered = df_santri_clean.copy()
     
     if not df_santri_clean.empty:
         f1, f2, f3 = st.columns(3)
-        with f1: filter_status = st.multiselect("Filter STATUS:", ["Aktif", "Keluar", "Lulus"], default=["Aktif"])
-        with f2: status_berkas = st.radio("Filter Kelengkapan:", ["Semua", "Hanya Belum Lengkap"], horizontal=True)
-        with f3: filter_saudara = st.radio("Filter Saudara:", ["Semua", "Hanya Kakak Beradik 👥"], horizontal=True)
+        with f1: 
+            filter_status = st.multiselect("Filter STATUS:", ["Aktif", "Keluar", "Lulus"], default=["Aktif"])
+        with f2: 
+            status_berkas = st.radio("Filter Kelengkapan:", ["Semua", "Hanya Belum Lengkap"], horizontal=True)
+        with f3: 
+            filter_saudara = st.radio("Filter Saudara:", ["Semua", "Hanya Kakak Beradik 👥"], horizontal=True)
         
         search_query = st.text_input("🔍 Cari nama / No Induk / No KK:")
-        df_filtered = df_santri_clean[df_santri_clean["STATUS"].isin(filter_status)]
+        
+        if "STATUS" in df_santri_clean.columns:
+            df_filtered = df_santri_clean[df_santri_clean["STATUS"].isin(filter_status)]
         
         if status_berkas == "Hanya Belum Lengkap":
             df_filtered = df_filtered[df_filtered.apply(lambda r: "🔴 BELUM LENGKAP" in r.values, axis=1)]
-        if filter_saudara == "Hanya Kakak Beradik 👥":
-            df_filtered = df_filtered[df_filtered["HUBUNGAN"].str.contains("Beradik", na=False)]
-        if search_query:
-            df_filtered = df_filtered[
-                df_filtered["NAMA SANTRI"].str.contains(search_query, case=False, na=False) | 
-                df_filtered["NO INDUK"].str.contains(search_query, case=False, na=False) |
-                df_filtered["KK"].str.contains(search_query, case=False, na=False)
-            ]
             
+        if filter_saudara == "Hanya Kakak Beradik 👥" and "HUBUNGAN" in df_filtered.columns:
+            df_filtered = df_filtered[df_filtered["HUBUNGAN"].str.contains("Beradik", na=False)]
+            
+        if search_query:
+            kondisi_cari = pd.Series(False, index=df_filtered.index)
+            if "NAMA SANTRI" in df_filtered.columns:
+                kondisi_cari |= df_filtered["NAMA SANTRI"].str.contains(search_query, case=False, na=False)
+            if "NO INDUK" in df_filtered.columns:
+                kondisi_cari |= df_filtered["NO INDUK"].str.contains(search_query, case=False, na=False)
+            if "KK" in df_filtered.columns:
+                kondisi_cari |= df_filtered["KK"].str.contains(search_query, case=False, na=False)
+            
+            df_filtered = df_filtered[kondisi_cari]
+
+    # Fungsi Pewarnaan Tabel
     def beri_warna_tabel(val):
         if val == "🔴 BELUM LENGKAP": 
             return "color: #FF4B4B; font-weight: bold; background-color: #FFEBEB;"
@@ -668,9 +697,10 @@ with tab_kelola:
             return "color: #1E6B7B; font-weight: bold; background-color: #E8F8F5;"
         return ""
 
+    # Daftar Kolom Tampilan
     kolom_tampil = ["NO INDUK", "NAMA SANTRI", "JENIS KELAMIN", "KELAS", "KAMAR", "KK", "HUBUNGAN", "STATUS"]
 
-    # Saringan aman agar tidak KeyError / Crash
+    # Saringan Aman Anti-Crash
     kolom_ada = [col for col in kolom_tampil if col in df_filtered.columns]
 
     if not df_filtered.empty and kolom_ada:

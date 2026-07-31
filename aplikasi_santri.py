@@ -203,23 +203,22 @@ def bersihkan_tanggal_indo(tgl_str):
     except: return "🔴 BELUM LENGKAP"
 
 # ==========================================
-# 3. ENGINE LOADER & SAVER (ANTI KEYERROR & CRASH)
+# 3. ENGINE LOADER & SAVER (ANTI 'df_kosong' IS NOT DEFINED)
 # ==========================================
 import requests
 
 def load_data_santri():
-    # Buat DataFrame kosong dengan kolom yang pasti lengkap sejak awal
+    # Inisialisasi df_kosong di PALING AWAL
     df_kosong = pd.DataFrame(columns=KOLOM_SANTRI)
     try:
         df = conn.read(worksheet="DATA_PUTRA", ttl="0")
         
-        # Jika sheet kosong / belum terisi data sama sekali
         if df is None or df.empty:
             return df_kosong
 
         df.columns = df.columns.str.upper().str.strip()
         
-        # Saringan Akses Login
+        # Saringan Hak Akses Login
         if "JENIS KELAMIN" in df.columns:
             akses_login = str(st.session_state.get("hak_akses", ""))
             if "Putra" in akses_login:
@@ -227,13 +226,12 @@ def load_data_santri():
             elif "Putri" in akses_login:
                 df = df[df["JENIS KELAMIN"].astype(str).str.upper().isin(["PUTRI"])]
 
-        # reindex memastikan SEMUA kolom wajib di KOLOM_SANTRI selalu ada
         return df.reindex(columns=KOLOM_SANTRI, fill_value="🔴 BELUM LENGKAP")
     except Exception as e:
         return df_kosong
 
 def load_data_asatidz():
-    # Buat DataFrame kosong dengan kolom yang pasti lengkap sejak awal
+    # Inisialisasi df_kosong di PALING AWAL
     df_kosong = pd.DataFrame(columns=KOLOM_ASATIDZ)
     try:
         df = conn.read(worksheet="DATA_ASATIDZ", ttl="0")

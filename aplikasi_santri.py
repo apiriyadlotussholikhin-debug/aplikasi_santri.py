@@ -203,33 +203,37 @@ def bersihkan_tanggal_indo(tgl_str):
     except: return "🔴 BELUM LENGKAP"
 
 # ==========================================
-# 3. ENGINE LOADER & SAVER (ANTI-CRASH & APPS SCRIPT)
+# 3. ENGINE LOADER & SAVER (ANTI KEYERROR & GOOGLE SHEETS)
 # ==========================================
 import requests
 
 def load_data_santri():
-    # Pastikan variabel df_kosong selalu siap sejak awal
+    # Pastikan df_kosong memiliki semua kolom wajib
     df_kosong = pd.DataFrame(columns=KOLOM_SANTRI)
     try:
         df = conn.read(worksheet="DATA_PUTRA", ttl="0")
         
-        # Jika sheet kosong total/belum ada isi
+        # Jika sheet kosong / belum ada data
         if df is None or df.empty:
             return df_kosong
 
         df.columns = df.columns.str.upper().str.strip()
         
-        # Lengkapi kolom yang hilang agar tidak KeyError
+        # Pastikan seluruh kolom yang dibutuhkan di KOLOM_SANTRI dibuat
         for col in KOLOM_SANTRI:
             if col not in df.columns:
-                if col == "KAMAR": df[col] = "Belum Diatur"
-                elif col == "STATUS": df[col] = "Aktif"
-                elif col == "JENIS KELAMIN": df[col] = "Putra"
-                else: df[col] = "🔴 BELUM LENGKAP"
+                if col == "KAMAR": 
+                    df[col] = "Belum Diatur"
+                elif col == "STATUS": 
+                    df[col] = "Aktif"
+                elif col == "JENIS KELAMIN": 
+                    df[col] = "Putra"
+                else: 
+                    df[col] = "🔴 BELUM LENGKAP"
             else:
                 df[col] = df[col].fillna("🔴 BELUM LENGKAP").astype(str).str.strip()
 
-        # Saringan Akses Login
+        # Saringan Hak Akses Login
         if "JENIS KELAMIN" in df.columns:
             akses_login = str(st.session_state.get("hak_akses", ""))
             if "Putra" in akses_login:
@@ -237,33 +241,34 @@ def load_data_santri():
             elif "Putri" in akses_login:
                 df = df[df["JENIS KELAMIN"].astype(str).str.upper().isin(["PUTRI"])]
 
-        return df[KOLOM_SANTRI]
+        # Mengembalikan DataFrame yang dipastikan memiliki SEMUA kolom dari KOLOM_SANTRI
+        return df.reindex(columns=KOLOM_SANTRI, fill_value="🔴 BELUM LENGKAP")
     except Exception as e:
         return df_kosong
 
 def load_data_asatidz():
-    # Pastikan variabel df_kosong selalu siap sejak awal
     df_kosong = pd.DataFrame(columns=KOLOM_ASATIDZ)
     try:
         df = conn.read(worksheet="DATA_ASATIDZ", ttl="0")
         
-        # Jika sheet kosong total
         if df is None or df.empty:
             return df_kosong
 
         df.columns = df.columns.str.upper().str.strip()
         
-        # Lengkapi kolom yang hilang
         for col in KOLOM_ASATIDZ:
             if col not in df.columns:
-                if col == "NIU": df[col] = "TEMP_GURU"
-                elif col == "STATUS": df[col] = "Aktif"
-                elif col == "JENIS KELAMIN": df[col] = "USTADZ"
-                else: df[col] = "🔴 BELUM LENGKAP"
+                if col == "NIU": 
+                    df[col] = "TEMP_GURU"
+                elif col == "STATUS": 
+                    df[col] = "Aktif"
+                elif col == "JENIS KELAMIN": 
+                    df[col] = "USTADZ"
+                else: 
+                    df[col] = "🔴 BELUM LENGKAP"
             else:
                 df[col] = df[col].fillna("🔴 BELUM LENGKAP").astype(str).str.strip()
 
-        # Saringan Akses Login
         if "JENIS KELAMIN" in df.columns:
             akses_login = str(st.session_state.get("hak_akses", ""))
             if "Putra" in akses_login:
@@ -271,7 +276,7 @@ def load_data_asatidz():
             elif "Putri" in akses_login:
                 df = df[df["JENIS KELAMIN"].isin(["Ustadzah", "Putri", "USTADZAH"])]
 
-        return df[KOLOM_ASATIDZ]
+        return df.reindex(columns=KOLOM_ASATIDZ, fill_value="🔴 BELUM LENGKAP")
     except Exception as e:
         return df_kosong
 

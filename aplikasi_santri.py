@@ -203,17 +203,23 @@ def bersihkan_tanggal_indo(tgl_str):
     except: return "🔴 BELUM LENGKAP"
 
 # ==========================================
-# 3. ENGINE LOADER & SAVER (VERSI GOOGLE SHEETS + APPS SCRIPT)
+# 3. ENGINE LOADER & SAVER (ANTI-CRASH & APPS SCRIPT)
 # ==========================================
 import requests
 
 def load_data_santri():
+    # Pastikan variabel df_kosong selalu siap sejak awal
     df_kosong = pd.DataFrame(columns=KOLOM_SANTRI)
     try:
-        # Membaca data live dari Google Sheets tab 'DATA_PUTRA'
         df = conn.read(worksheet="DATA_PUTRA", ttl="0")
+        
+        # Jika sheet kosong total/belum ada isi
+        if df is None or df.empty:
+            return df_kosong
+
         df.columns = df.columns.str.upper().str.strip()
         
+        # Lengkapi kolom yang hilang agar tidak KeyError
         for col in KOLOM_SANTRI:
             if col not in df.columns:
                 if col == "KAMAR": df[col] = "Belum Diatur"
@@ -223,25 +229,31 @@ def load_data_santri():
             else:
                 df[col] = df[col].fillna("🔴 BELUM LENGKAP").astype(str).str.strip()
 
-        # Filter Saringan Akses Login
-        if not df.empty and "JENIS KELAMIN" in df.columns:
+        # Saringan Akses Login
+        if "JENIS KELAMIN" in df.columns:
             akses_login = str(st.session_state.get("hak_akses", ""))
             if "Putra" in akses_login:
                 df = df[df["JENIS KELAMIN"].astype(str).str.upper().isin(["PUTRA"])]
             elif "Putri" in akses_login:
                 df = df[df["JENIS KELAMIN"].astype(str).str.upper().isin(["PUTRI"])]
 
-        return df
+        return df[KOLOM_SANTRI]
     except Exception as e:
         return df_kosong
 
 def load_data_asatidz():
+    # Pastikan variabel df_kosong selalu siap sejak awal
     df_kosong = pd.DataFrame(columns=KOLOM_ASATIDZ)
     try:
-        # Membaca data live dari Google Sheets tab 'DATA_ASATIDZ'
         df = conn.read(worksheet="DATA_ASATIDZ", ttl="0")
+        
+        # Jika sheet kosong total
+        if df is None or df.empty:
+            return df_kosong
+
         df.columns = df.columns.str.upper().str.strip()
         
+        # Lengkapi kolom yang hilang
         for col in KOLOM_ASATIDZ:
             if col not in df.columns:
                 if col == "NIU": df[col] = "TEMP_GURU"
@@ -251,8 +263,8 @@ def load_data_asatidz():
             else:
                 df[col] = df[col].fillna("🔴 BELUM LENGKAP").astype(str).str.strip()
 
-        # Filter Saringan Akses Login
-        if not df.empty and "JENIS KELAMIN" in df.columns:
+        # Saringan Akses Login
+        if "JENIS KELAMIN" in df.columns:
             akses_login = str(st.session_state.get("hak_akses", ""))
             if "Putra" in akses_login:
                 df = df[df["JENIS KELAMIN"].isin(["Ustadz", "Putra", "USTADZ"])]
@@ -264,7 +276,6 @@ def load_data_asatidz():
         return df_kosong
 
 def save_all(df, filename):
-    # Fitur Auto-Save Permanen menggunakan Jembatan Apps Script
     try:
         url_script = st.secrets.get("URL_SCRIPT", "")
         if "santri" in filename.lower():
@@ -273,13 +284,11 @@ def save_all(df, filename):
             nama_sheet = "DATA_ASATIDZ"
             
         if not df.empty and url_script:
-            # Mengambil baris data paling baru yang diinput
             baris_terakhir = df.iloc[-1].fillna("").astype(str).tolist()
             payload = {
                 "sheet_name": nama_sheet,
                 "row": baris_terakhir
             }
-            # Mengirimkan data langsung ke Google Sheets
             requests.post(url_script, json=payload)
             st.toast("✅ Perubahan tersimpan abadi ke Google Sheets!", icon="💾")
     except Exception as e:

@@ -661,20 +661,22 @@ with tab_kelola:
                 df_filtered["KK"].str.contains(search_query, case=False, na=False)
             ]
             
-        def beri_warna_tabel(val):
-    if val == "🔴 BELUM LENGKAP": return "color: #FF4B4B; font-weight: bold; background-color: #FFEBEB;"
-    if "👥" in str(val): return "color: #1E6B7B; font-weight: bold; background-color: #E8F8F5;"
-    return ""
+    def beri_warna_tabel(val):
+        if val == "🔴 BELUM LENGKAP": 
+            return "color: #FF4B4B; font-weight: bold; background-color: #FFEBEB;"
+        if "👥" in str(val): 
+            return "color: #1E6B7B; font-weight: bold; background-color: #E8F8F5;"
+        return ""
 
-kolom_tampil = ["NO INDUK", "NAMA SANTRI", "JENIS KELAMIN", "KELAS", "KAMAR", "KK", "HUBUNGAN", "STATUS"]
+    kolom_tampil = ["NO INDUK", "NAMA SANTRI", "JENIS KELAMIN", "KELAS", "KAMAR", "KK", "HUBUNGAN", "STATUS"]
 
-# Saringan aman agar tidak KeyError
-kolom_ada = [col for col in kolom_tampil if col in df_filtered.columns]
+    # Saringan aman agar tidak KeyError / Crash
+    kolom_ada = [col for col in kolom_tampil if col in df_filtered.columns]
 
-if not df_filtered.empty and kolom_ada:
-    st.dataframe(df_filtered[kolom_ada].style.map(beri_warna_tabel), use_container_width=True)
-else:
-    st.info("ℹ️ Belum ada data untuk ditampilkan saat ini.")
+    if not df_filtered.empty and kolom_ada:
+        st.dataframe(df_filtered[kolom_ada].style.map(beri_warna_tabel), use_container_width=True)
+    else:
+        st.info("ℹ️ Belum ada data untuk ditampilkan saat ini.")
         
         st.write("---")
         st.subheader("🛠️ Ubah / Hapus Data Santri")

@@ -1,16 +1,27 @@
+import os
+import io
+import time
+import shutil
 import subprocess
 import sys
+import requests
+from datetime import datetime
 
+import pandas as pd
+import openpyxl
 import streamlit as st
+from streamlit_gsheets import GSheetsConnection
 
-# Mencegah browser melakukan Auto-Translate yang bikin UI crash
+# ==========================================
+# 0. KONFIGURASI STREAMLIT & ANTI-TRANSLATE
+# ==========================================
 st.set_page_config(
-    page_title="Aplikasi Santri",
+    page_title="Sistem Informasi Pesantren",
     page_icon="🕌",
     layout="wide"
 )
 
-# Masukkan tag HTML untuk mematikan Google Translate di browser
+# Mencegah browser melakukan Auto-Translate yang membuat UI crash
 st.markdown(
     """
     <html lang="id" class="notranslate" translate="no">
@@ -20,20 +31,12 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-import pandas as pd
-import openpyxl
-import os
-import shutil
-from datetime import datetime
-import time
-from streamlit_gsheets import GSheetsConnection
 
 # Inisialisasi Koneksi Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
-import io  # Ditambahkan untuk handle eksport ke Excel asli
 
 # ==========================================
-# FUNGSI NOTIFIKASI SUKSES (TARUH DI SINI)
+# FUNGSI NOTIFIKASI SUKSES
 # ==========================================
 def tampilkan_notifikasi_sukses():
     st.toast("✅ PERUBAHAN BERHASIL DISIMPAN!", icon="✅")
@@ -41,7 +44,7 @@ def tampilkan_notifikasi_sukses():
     time.sleep(1)
 
 # =========================================================
-# 🔐 KODE BARU 1: SISTEM KEAMANAN 3 AKUN UTAMA
+# 🔐 1. SISTEM KEAMANAN & AKUN LOGIN
 # =========================================================
 AKUN_DATABASE = {
     "ADMIN PONTRA": {"password": "PONTRA.1", "akses": "Putra dan Ustadz"},
@@ -58,7 +61,7 @@ def halaman_login():
     st.markdown("<p style='text-align: center; color: #6B7280;'>Silakan login sesuai dengan akun komplek Anda</p>", unsafe_allow_html=True)
     
     with st.form("form_login"):
-        username = st.text_input("Username Admin:", placeholder="Masukkan admin_putra / admin_putri / admin_pusat")
+        username = st.text_input("Username Admin:", placeholder="Masukkan ADMIN PONTRA / ADMIN PONTRI / ADMIN PUSAT")
         password = st.text_input("Password / Kata Sandi:", type="password", placeholder="Masukkan password")
         tombol_masuk = st.form_submit_button("Masuk ke Aplikasi 🚀", use_container_width=True)
         
@@ -66,57 +69,48 @@ def halaman_login():
             if username in AKUN_DATABASE and AKUN_DATABASE[username]["password"] == password:
                 st.session_state["terautentikasi"] = True
                 st.session_state["hak_akses"] = AKUN_DATABASE[username]["akses"]
-                st.success(f"✅ Login Berhasil!")
+                st.success("✅ Login Berhasil!")
                 st.rerun()
             else:
                 st.error("❌ Username atau Password salah!")
 
 if not st.session_state["terautentikasi"]:
     halaman_login()
-    st.stop() # <--- Di sini Python mogok kalau belum login!
+    st.stop()  # Mengunci sistem jika belum login
+
 # =========================================================
-# 🚪 TOMBOL LOG OUT (DI SIDEBAR SEBELAH KIRI)
+# 🚪 SIDEBAR: LOGOUT & SINKRONISASI
 # =========================================================
 with st.sidebar:
     st.markdown(f"### 👤 Admin: **{st.session_state['hak_akses']}**")
     st.write("---")
     
-    # Tombol merah untuk Log Out
     tombol_logout = st.button("🚪 Keluar / Log Out", use_container_width=True, type="primary")
-    
     if tombol_logout:
-        # Reset ulang semua status memori login
         st.session_state["terautentikasi"] = False
         st.session_state["hak_akses"] = None
         st.success("Berhasil keluar! Mengunci sistem...")
-        time.sleep(1) # Beri jeda 1 detik biar estetik
-        st.rerun() # Refresh halaman untuk memunculkan gembok kembali
+        time.sleep(1)
+        st.rerun()
 
     st.write("---")
-
-    # ==================================================================
-    # REFRESH GLOBAL (UNTUK MULTI-USER/KOMPUTER 1, 2, 3) - VERSI AMAN TOTAL
-    # ==================================================================
     st.subheader("🔄 Sinkronisasi Sistem")
     
     if st.button("🔄 Refresh Semua Data", use_container_width=True):
-        # Beri notifikasi melayang di layar
         st.toast("⚡ Menyinkronkan data terbaru dari komputer lain...")
         time.sleep(0.5)
-        # Paksa Streamlit mengulang skrip dari atas dan membaca ulang semua CSV
         st.rerun()
-# ==========================================
-# 1. KONFIGURASI UTAMA & DEKLARASI FILE
-# ==========================================
-st.set_page_config(page_title="Sistem Informasi Pesantren", layout="wide")
 
+# ==========================================
+# 2. KONFIGURASI FILE & KOLOM DATABASE
+# ==========================================
 FILE_SANTRI = "data_santri.csv"
 FILE_ASATIDZ = "data_asatidz.csv"
 FILE_PENGURUS_KAMAR = "data_pengurus_kamar.csv"
 FOLDER_BACKUP = "backup_data_santri"
 
 NAMA_PONPES = "API RIYADLOTUSSHOLIKHIN WASSHOLIKHAT"
-DAFTAR_KAMAR = ["Kamar A1", "Kamar A2", "Kamar B1", "Kamar B2", "Kamar C2","Kamar Putri"]
+DAFTAR_KAMAR = ["Kamar A1", "Kamar A2", "Kamar B1", "Kamar B2", "Kamar C2", "Kamar Putri"]
 
 KOLOM_SANTRI = [
     "NO INDUK", "NAMA SANTRI", "JENIS KELAMIN", "AYAH", "IBU", "WALI", 
@@ -143,7 +137,7 @@ MIN_DATE = datetime(1945, 1, 1)
 MAX_DATE = datetime(2050, 12, 31)
 
 # ==========================================
-# 2. SISTEM KEAMANAN UNDO / REDO & BACKUP
+# 3. SISTEM UNDO / REDO & BACKUP
 # ==========================================
 if not os.path.exists(FOLDER_BACKUP):
     os.makedirs(FOLDER_BACKUP)
@@ -155,10 +149,11 @@ def jalankan_auto_backup(filename, label_aksi="backup"):
             nama_file_asli, ekstensi = os.path.splitext(filename)
             path_tujuan_backup = os.path.join(FOLDER_BACKUP, f"{nama_file_asli}_{label_aksi}_{stempel_waktu}{ekstensi}")
             shutil.copy2(filename, path_tujuan_backup)
-        except: pass
+        except Exception:
+            pass
 
 def eksekusi_undo(filename):
-    nama_murni, ekstensi = os.path.splitext(filename)
+    nama_murni, _ = os.path.splitext(filename)
     files = sorted([f for f in os.listdir(FOLDER_BACKUP) if f.startswith(f"{nama_murni}_sebelum_")], 
                    key=lambda x: os.path.getmtime(os.path.join(FOLDER_BACKUP, x)), reverse=True)
     if files:
@@ -169,7 +164,7 @@ def eksekusi_undo(filename):
     return False
 
 def eksekusi_redo(filename):
-    nama_murni, ekstensi = os.path.splitext(filename)
+    nama_murni, _ = os.path.splitext(filename)
     files = sorted([f for f in os.listdir(FOLDER_BACKUP) if f.startswith(f"{nama_murni}_sesudah_")], 
                    key=lambda x: os.path.getmtime(os.path.join(FOLDER_BACKUP, x)), reverse=True)
     if files:
@@ -180,17 +175,19 @@ def eksekusi_redo(filename):
     return False
 
 # ==========================================
-# 3. ENGINE LOADER & SAVER (ANTI DESIMAL & ANTI CRASH)
+# 4. UTILITAS MEMBERSIHKAN TANGGAL
 # ==========================================
 def bersihkan_tanggal_indo(tgl_str):
     try:
         tgl_str = str(tgl_str).strip().lower()
-        if tgl_str == "nan" or tgl_str == "" or "belum lengkap" in tgl_str:
+        if tgl_str in ["nan", "", "none"] or "belum lengkap" in tgl_str:
             return "🔴 BELUM LENGKAP"
         try:
             datetime.strptime(tgl_str, "%Y-%m-%d")
             return tgl_str
-        except: pass
+        except ValueError:
+            pass
+        
         parts = tgl_str.split()
         if len(parts) == 3:
             hari = parts[0].zfill(2)
@@ -200,15 +197,13 @@ def bersihkan_tanggal_indo(tgl_str):
                 bulan = BULAN_INDO[bulan_text]
                 return f"{tahun}-{bulan}-{hari}"
         return "🔴 BELUM LENGKAP"
-    except: return "🔴 BELUM LENGKAP"
+    except Exception:
+        return "🔴 BELUM LENGKAP"
 
 # ==========================================
-# 3. ENGINE LOADER & SAVER (ANTI 'df_kosong' IS NOT DEFINED)
+# 5. ENGINE LOADER & SAVER (ANTI CRASH & AMAN MULTI-USER)
 # ==========================================
-import requests
-
 def load_data_santri():
-    # Inisialisasi df_kosong di PALING AWAL
     df_kosong = pd.DataFrame(columns=KOLOM_SANTRI)
     try:
         df = conn.read(worksheet="DATA_PUTRA", ttl="0")
@@ -218,7 +213,7 @@ def load_data_santri():
 
         df.columns = df.columns.str.upper().str.strip()
         
-        # Saringan Hak Akses Login
+        # Saringan Hak Akses Login (Putra vs Putri)
         if "JENIS KELAMIN" in df.columns:
             akses_login = str(st.session_state.get("hak_akses", ""))
             if "Putra" in akses_login:
@@ -227,11 +222,10 @@ def load_data_santri():
                 df = df[df["JENIS KELAMIN"].astype(str).str.upper().isin(["PUTRI"])]
 
         return df.reindex(columns=KOLOM_SANTRI, fill_value="🔴 BELUM LENGKAP")
-    except Exception as e:
+    except Exception:
         return df_kosong
 
 def load_data_asatidz():
-    # Inisialisasi df_kosong di PALING AWAL
     df_kosong = pd.DataFrame(columns=KOLOM_ASATIDZ)
     try:
         df = conn.read(worksheet="DATA_ASATIDZ", ttl="0")
@@ -249,16 +243,13 @@ def load_data_asatidz():
                 df = df[df["JENIS KELAMIN"].isin(["Ustadzah", "Putri", "USTADZAH"])]
 
         return df.reindex(columns=KOLOM_ASATIDZ, fill_value="🔴 BELUM LENGKAP")
-    except Exception as e:
+    except Exception:
         return df_kosong
 
 def save_all(df, filename):
     try:
         url_script = st.secrets.get("URL_SCRIPT", "")
-        if "santri" in filename.lower():
-            nama_sheet = "DATA_PUTRA"
-        else:
-            nama_sheet = "DATA_ASATIDZ"
+        nama_sheet = "DATA_PUTRA" if "santri" in filename.lower() else "DATA_ASATIDZ"
             
         if not df.empty and url_script:
             baris_terakhir = df.iloc[-1].fillna("").astype(str).tolist()
@@ -266,7 +257,7 @@ def save_all(df, filename):
                 "sheet_name": nama_sheet,
                 "row": baris_terakhir
             }
-            requests.post(url_script, json=payload)
+            requests.post(url_script, json=payload, timeout=5)
             st.toast("✅ Perubahan tersimpan abadi ke Google Sheets!", icon="💾")
     except Exception as e:
         st.error(f"Gagal menyimpan ke Google Sheets: {e}")
@@ -563,56 +554,64 @@ with tab_input:
                     tampilkan_notifikasi_sukses()
                     st.rerun()
     else:
-        st.subheader("📥 Impor via File Excel (.xlsx)")
-        # REVISI: Mengubah tipe file yang diterima menjadi .xlsx
-        uploaded_file = st.file_uploader("Pilih file Excel (.xlsx) Anda:", type=["xlsx"])
-        if uploaded_file is not None:
-            try:
-                # Membaca file Excel asli dan memaksa semua kolom dibaca sebagai text/string
-                df_upload = pd.read_excel(uploaded_file, dtype=str)
-                df_upload.columns = df_upload.columns.str.upper().str.strip()
+    st.subheader("📥 Impor via File Excel (.xlsx)")
+    # Mengubah tipe file yang diterima menjadi .xlsx
+    uploaded_file = st.file_uploader("Pilih file Excel (.xlsx) Anda:", type=["xlsx"])
+    if uploaded_file is not None:
+        try:
+            # Membaca file Excel asli dan memaksa semua kolom dibaca sebagai text/string
+            df_upload = pd.read_excel(uploaded_file, dtype=str)
+            df_upload.columns = df_upload.columns.str.upper().str.strip()
+            
+            if "NAMA SANTRI" in df_upload.columns:
+                df_upload = df_upload.fillna("🔴 BELUM LENGKAP")
+                if "NO INDUK" not in df_upload.columns: 
+                    df_upload["NO INDUK"] = "🔴 BELUM LENGKAP"
+                    
+                for col in KOLOM_SANTRI:
+                    if col not in df_upload.columns:
+                        if col == "KAMAR": df_upload[col] = "Belum Diatur"
+                        elif col == "STATUS": df_upload[col] = "AKTIF"
+                        elif col == "JENIS KELAMIN": df_upload[col] = "PUTRA"
+                        else: df_upload[col] = "🔴 BELUM LENGKAP"
+                    else:
+                        df_upload[col] = df_upload[col].astype(str).str.replace("nan", "🔴 BELUM LENGKAP", regex=False).str.strip()
                 
-                if "NAMA SANTRI" in df_upload.columns:
-                    df_upload = df_upload.fillna("🔴 BELUM LENGKAP")
-                    if "NO INDUK" not in df_upload.columns: df_upload["NO INDUK"] = "🔴 BELUM LENGKAP"
-                        
-                    for col in KOLOM_SANTRI:
-                        if col not in df_upload.columns:
-                            if col == "KAMAR": df_upload[col] = "Belum Diatur"
-                            elif col == "STATUS": df_upload[col] = "AKTIF"
-                            elif col == "JENIS KELAMIN": df_upload[col] = "PUTRA"
-                            else: df_upload[col] = "🔴 BELUM LENGKAP"
-                        else:
-                            df_upload[col] = df_upload[col].astype(str).str.replace("nan", "🔴 BELUM LENGKAP", regex=False).str.strip()
-                    
-                    if "STATUS" in df_upload.columns:
-                        df_upload["STATUS"] = df_upload["STATUS"].str.strip().str.upper().replace({"AKTIF": "Aktif", "KELUAR": "Keluar", "LULUS": "Lulus"})
-                        df_upload.loc[~df_upload["STATUS"].isin(["Aktif", "Keluar", "Lulus"]), "STATUS"] = "Aktif"
-                    
-                    if "JENIS KELAMIN" in df_upload.columns:
-                        df_upload["JENIS KELAMIN"] = df_upload["JENIS KELAMIN"].str.strip().str.upper()
+                if "STATUS" in df_upload.columns:
+                    df_upload["STATUS"] = df_upload["STATUS"].str.strip().str.upper().replace({"AKTIF": "Aktif", "KELUAR": "Keluar", "LULUS": "Lulus"})
+                    df_upload.loc[~df_upload["STATUS"].isin(["Aktif", "Keluar", "Lulus"]), "STATUS"] = "Aktif"
+                
+                if "JENIS KELAMIN" in df_upload.columns:
+                    df_upload["JENIS KELAMIN"] = df_upload["JENIS KELAMIN"].str.strip().str.upper()
 
-                    if "TGL LAHIR" in df_upload.columns:
-                        df_upload["TGL LAHIR"] = df_upload["TGL LAHIR"].apply(bersihkan_tanggal_indo)
+                if "TGL LAHIR" in df_upload.columns and 'bersihkan_tanggal_indo' in globals():
+                    df_upload["TGL LAHIR"] = df_upload["TGL LAHIR"].apply(bersihkan_tanggal_indo)
+                
+                # Bersihkan sisa desimal .0 pada KK/NIK jika admin telanjur salah ketik di Excel
+                for c_num in ["NO INDUK", "NIK", "KK"]:
+                    if c_num in df_upload.columns:
+                        df_upload[c_num] = df_upload[c_num].apply(lambda x: x.split('.')[0] if '.' in x and x.split('.')[1] == '0' else x)
+                        
+                df_upload = df_upload[KOLOM_SANTRI]
+                st.write("👀 **Pratinjau Data Yang Akan Dimasukkan:**")
+                st.dataframe(df_upload.head(10))
+                
+                if st.button("🚀 Masukkan Semua Data ke Aplikasi", type="primary"):
+                    # AMAN: Ambil df_santri terbaru agar tidak NameError
+                    df_santri_skrg = load_data_santri()
                     
-                    # Bersihkan sisa desimal .0 pada KK/NIK jika admin telanjur salah ketik di Excel
-                    for c_num in ["NO INDUK", "NIK", "KK"]:
-                        if c_num in df_upload.columns:
-                            df_upload[c_num] = df_upload[c_num].apply(lambda x: x.split('.')[0] if '.' in x and x.split('.')[1] == '0' else x)
-                            
-                    df_upload = df_upload[KOLOM_SANTRI]
-                    st.write("👀 **Pratinjau Data Yang Akan Dimasukkan:**")
-                    st.dataframe(df_upload.head(10))
-                    
-                    if st.button("🚀 Masukkan Semua Data ke Aplikasi", type="primary"):
-                        df_santri = df_upload if (df_santri.empty or "🔴 BELUM LENGKAP" in df_santri["NAMA SANTRI"].values) else pd.concat([df_santri, df_upload], ignore_index=True)
-                        save_all(df_santri[KOLOM_SANTRI], FILE_SANTRI)
-                        tampilkan_notifikasi_sukses()
-                        st.rerun()
-                else:
-                    st.error("❌ Gagal! File Excel harus memiliki kolom bernama 'NAMA SANTRI'")
-            except Exception as e: 
-                st.error(f"Gagal membaca file Excel: {e}")
+                    if df_santri_skrg.empty or ("NAMA SANTRI" in df_santri_skrg.columns and "🔴 BELUM LENGKAP" in df_santri_skrg["NAMA SANTRI"].values):
+                        df_santri_baru = df_upload
+                    else:
+                        df_santri_baru = pd.concat([df_santri_skrg, df_upload], ignore_index=True)
+                        
+                    save_all(df_santri_baru[KOLOM_SANTRI], FILE_SANTRI)
+                    tampilkan_notifikasi_sukses()
+                    st.rerun()
+            else:
+                st.error("❌ Gagal! File Excel harus memiliki kolom bernama 'NAMA SANTRI'")
+        except Exception as e: 
+            st.error(f"Gagal memproses file Excel: {e}")
 
 # ------------------------------------------
 # TAB 3: KELOLA DATA SANTRI (WITH UNDO & REDO - ANTI CRASH)

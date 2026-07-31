@@ -203,37 +203,23 @@ def bersihkan_tanggal_indo(tgl_str):
     except: return "🔴 BELUM LENGKAP"
 
 # ==========================================
-# 3. ENGINE LOADER & SAVER (ANTI KEYERROR & GOOGLE SHEETS)
+# 3. ENGINE LOADER & SAVER (ANTI KEYERROR & CRASH)
 # ==========================================
 import requests
 
 def load_data_santri():
-    # Pastikan df_kosong memiliki semua kolom wajib
+    # Buat DataFrame kosong dengan kolom yang pasti lengkap sejak awal
     df_kosong = pd.DataFrame(columns=KOLOM_SANTRI)
     try:
         df = conn.read(worksheet="DATA_PUTRA", ttl="0")
         
-        # Jika sheet kosong / belum ada data
+        # Jika sheet kosong / belum terisi data sama sekali
         if df is None or df.empty:
             return df_kosong
 
         df.columns = df.columns.str.upper().str.strip()
         
-        # Pastikan seluruh kolom yang dibutuhkan di KOLOM_SANTRI dibuat
-        for col in KOLOM_SANTRI:
-            if col not in df.columns:
-                if col == "KAMAR": 
-                    df[col] = "Belum Diatur"
-                elif col == "STATUS": 
-                    df[col] = "Aktif"
-                elif col == "JENIS KELAMIN": 
-                    df[col] = "Putra"
-                else: 
-                    df[col] = "🔴 BELUM LENGKAP"
-            else:
-                df[col] = df[col].fillna("🔴 BELUM LENGKAP").astype(str).str.strip()
-
-        # Saringan Hak Akses Login
+        # Saringan Akses Login
         if "JENIS KELAMIN" in df.columns:
             akses_login = str(st.session_state.get("hak_akses", ""))
             if "Putra" in akses_login:
@@ -241,12 +227,13 @@ def load_data_santri():
             elif "Putri" in akses_login:
                 df = df[df["JENIS KELAMIN"].astype(str).str.upper().isin(["PUTRI"])]
 
-        # Mengembalikan DataFrame yang dipastikan memiliki SEMUA kolom dari KOLOM_SANTRI
+        # reindex memastikan SEMUA kolom wajib di KOLOM_SANTRI selalu ada
         return df.reindex(columns=KOLOM_SANTRI, fill_value="🔴 BELUM LENGKAP")
     except Exception as e:
         return df_kosong
 
 def load_data_asatidz():
+    # Buat DataFrame kosong dengan kolom yang pasti lengkap sejak awal
     df_kosong = pd.DataFrame(columns=KOLOM_ASATIDZ)
     try:
         df = conn.read(worksheet="DATA_ASATIDZ", ttl="0")
@@ -256,19 +243,6 @@ def load_data_asatidz():
 
         df.columns = df.columns.str.upper().str.strip()
         
-        for col in KOLOM_ASATIDZ:
-            if col not in df.columns:
-                if col == "NIU": 
-                    df[col] = "TEMP_GURU"
-                elif col == "STATUS": 
-                    df[col] = "Aktif"
-                elif col == "JENIS KELAMIN": 
-                    df[col] = "USTADZ"
-                else: 
-                    df[col] = "🔴 BELUM LENGKAP"
-            else:
-                df[col] = df[col].fillna("🔴 BELUM LENGKAP").astype(str).str.strip()
-
         if "JENIS KELAMIN" in df.columns:
             akses_login = str(st.session_state.get("hak_akses", ""))
             if "Putra" in akses_login:
@@ -688,12 +662,19 @@ with tab_kelola:
             ]
             
         def beri_warna_tabel(val):
-            if val == "🔴 BELUM LENGKAP": return "color: #FF4B4B; font-weight: bold; background-color: #FFEBEB;"
-            if "👥" in str(val): return "color: #1E6B7B; font-weight: bold; background-color: #E8F8F5;"
-            return ""
+    if val == "🔴 BELUM LENGKAP": return "color: #FF4B4B; font-weight: bold; background-color: #FFEBEB;"
+    if "👥" in str(val): return "color: #1E6B7B; font-weight: bold; background-color: #E8F8F5;"
+    return ""
 
-        kolom_tampil = ["NO INDUK", "NAMA SANTRI", "JENIS KELAMIN", "KELAS", "KAMAR", "KK", "HUBUNGAN", "STATUS"]
-        st.dataframe(df_filtered[kolom_tampil].style.map(beri_warna_tabel), use_container_width=True)
+kolom_tampil = ["NO INDUK", "NAMA SANTRI", "JENIS KELAMIN", "KELAS", "KAMAR", "KK", "HUBUNGAN", "STATUS"]
+
+# Saringan aman agar tidak KeyError
+kolom_ada = [col for col in kolom_tampil if col in df_filtered.columns]
+
+if not df_filtered.empty and kolom_ada:
+    st.dataframe(df_filtered[kolom_ada].style.map(beri_warna_tabel), use_container_width=True)
+else:
+    st.info("ℹ️ Belum ada data untuk ditampilkan saat ini.")
         
         st.write("---")
         st.subheader("🛠️ Ubah / Hapus Data Santri")

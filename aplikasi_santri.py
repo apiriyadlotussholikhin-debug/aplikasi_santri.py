@@ -203,12 +203,14 @@ def bersihkan_tanggal_indo(tgl_str):
     except: return "🔴 BELUM LENGKAP"
 
 # ==========================================
-# 3. ENGINE LOADER & SAVER (VERSI GOOGLE SHEETS)
+# 3. ENGINE LOADER & SAVER (VERSI GOOGLE SHEETS + APPS SCRIPT)
 # ==========================================
+import requests
+
 def load_data_santri():
     df_kosong = pd.DataFrame(columns=KOLOM_SANTRI)
     try:
-        # Membaca live dari Google Sheets tab 'DATA_PUTRA' (atau sesuaikan nama tab-nya)
+        # Membaca data live dari Google Sheets tab 'DATA_PUTRA'
         df = conn.read(worksheet="DATA_PUTRA", ttl="0")
         df.columns = df.columns.str.upper().str.strip()
         
@@ -221,7 +223,7 @@ def load_data_santri():
             else:
                 df[col] = df[col].fillna("🔴 BELUM LENGKAP").astype(str).str.strip()
 
-        # Filter Saringan Akses Login (Tetap menggunakan logika login sakti milikmu)
+        # Filter Saringan Akses Login
         if not df.empty and "JENIS KELAMIN" in df.columns:
             akses_login = str(st.session_state.get("hak_akses", ""))
             if "Putra" in akses_login:
@@ -236,7 +238,7 @@ def load_data_santri():
 def load_data_asatidz():
     df_kosong = pd.DataFrame(columns=KOLOM_ASATIDZ)
     try:
-        # Membaca live dari Google Sheets tab 'DATA_ASATIDZ'
+        # Membaca data live dari Google Sheets tab 'DATA_ASATIDZ'
         df = conn.read(worksheet="DATA_ASATIDZ", ttl="0")
         df.columns = df.columns.str.upper().str.strip()
         
@@ -262,13 +264,24 @@ def load_data_asatidz():
         return df_kosong
 
 def save_all(df, filename):
-    # Menyimpan data langsung ke Google Sheets secara realtime (Auto-Save Abadi)
+    # Fitur Auto-Save Permanen menggunakan Jembatan Apps Script
     try:
+        url_script = st.secrets.get("URL_SCRIPT", "")
         if "santri" in filename.lower():
-            conn.update(worksheet="DATA_PUTRA", data=df)
-        elif "asatidz" in filename.lower():
-            conn.update(worksheet="DATA_ASATIDZ", data=df)
-        st.toast("✅ Perubahan tersimpan abadi di Google Sheets!", icon="💾")
+            nama_sheet = "DATA_PUTRA"
+        else:
+            nama_sheet = "DATA_ASATIDZ"
+            
+        if not df.empty and url_script:
+            # Mengambil baris data paling baru yang diinput
+            baris_terakhir = df.iloc[-1].fillna("").astype(str).tolist()
+            payload = {
+                "sheet_name": nama_sheet,
+                "row": baris_terakhir
+            }
+            # Mengirimkan data langsung ke Google Sheets
+            requests.post(url_script, json=payload)
+            st.toast("✅ Perubahan tersimpan abadi ke Google Sheets!", icon="💾")
     except Exception as e:
         st.error(f"Gagal menyimpan ke Google Sheets: {e}")
 	

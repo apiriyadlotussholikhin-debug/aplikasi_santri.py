@@ -554,7 +554,7 @@ with tab_input:
                     tampilkan_notifikasi_sukses()
                     st.rerun()
     else:
-    st.subheader("📥 Impor via File Excel (.xlsx)")
+        st.subheader("📥 Impor via File Excel (.xlsx)")
     # Mengubah tipe file yang diterima menjadi .xlsx
     uploaded_file = st.file_uploader("Pilih file Excel (.xlsx) Anda:", type=["xlsx"])
     if uploaded_file is not None:
